@@ -234,3 +234,23 @@ pre#log {
   outline: 2px solid var(--ui-color-primary-500);
   outline-offset: 1px;
 }
+
+/* Marks the demos worth trying first. Purely decorative — a red triangle filling the
+   button's top-right corner, clipped by the button's own radius via overflow: hidden.
+   inset-inline-end rather than right, to match the rest of the codebase's logical
+   properties; identical in this LTR page. */
+.demo-btn.featured {
+  position: relative;
+  overflow: hidden;
+}
+
+.demo-btn.featured::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  inset-inline-end: 0;
+  width: 0.55rem;
+  height: 0.55rem;
+  background: #d03b3b;
+  clip-path: polygon(100% 0, 100% 100%, 0 0);
+}

@@ -20,6 +20,7 @@ const germanTexts = bundleTexts({
       titleDecideCritical: "Entscheidung",
       titleForm: "Eingabe",
       titleFormCritical: "Eingabe",
+      titleDrawer: "Eingabe",
     }),
     allTexts(toastTexts, {
       dismiss: "Benachrichtigung ausblenden",

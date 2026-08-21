@@ -134,7 +134,7 @@ const dialogs = createDialogsController({
 // native constraint validation, so `required` here is what blocks the confirm button.
 const formContent = () => html`
   <label class="field">
-    Name
+    <span class="label-text">Name</span>
     <input
       name="name"
       placeholder="Jane Doe"
@@ -144,7 +144,7 @@ const formContent = () => html`
     />
   </label>
   <label class="field">
-    Email
+    <span class="label-text">Email</span>
     <input
       type="email"
       name="email"
@@ -153,7 +153,7 @@ const formContent = () => html`
     />
   </label>
   <label class="field">
-    Date of birth
+    <span class="label-text">Date of birth</span>
     <input type="date" name="dateOfBirth" required autocomplete="off" />
   </label>
   <label class="check">
@@ -171,6 +171,17 @@ const formStyles = `
 
   /* Checkbox rows read left-to-right, so they get their own class rather than .field. */
   .check { display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; }
+
+  /* Mandatory marker, selected off the input's own "required" attribute via :has()
+     rather than hand-written into each label — so it can't drift out of sync with what
+     actually blocks the confirm button. Decorative on purpose: "required" is what
+     assistive tech announces, which is why this is a pseudo-element rather than text in
+     the accessibility tree. (No backticks in here — this whole block is a JS template
+     literal.) */
+  .field:has(input:required) > .label-text::after {
+    content: " *";
+    color: #d03b3b;
+  }
 
   .field input {
     box-sizing: border-box;
@@ -558,7 +569,7 @@ async function runLogin(): Promise<void> {
       title: "Sign in",
       content: html`
         <label class="field">
-          Email
+          <span class="label-text">Email</span>
           <input
             type="email"
             name="email"
@@ -569,7 +580,7 @@ async function runLogin(): Promise<void> {
           />
         </label>
         <label class="field">
-          Password
+          <span class="label-text">Password</span>
           <!-- "new-password", not "off": browsers deliberately ignore
                autocomplete="off" on password fields, but treating this as a *new*
                password does keep the password manager from filling a saved one. -->
@@ -623,6 +634,32 @@ async function runLogin(): Promise<void> {
   }
 }
 
+// The drawer surface: the same form contract as runLogin() above, on a full-height panel
+// at the inline-end edge. Uses drawerAttempts() rather than drawer(), which is the point
+// of the pair — a wide edit panel is exactly where you don't want to close on submit and
+// lose what was typed.
+async function runDrawer(): Promise<void> {
+  const drawer = dialogs.drawerAttempts({
+    title: "Edit customer",
+    content: formContent(),
+    styles: formStyles,
+    buttons: { confirm: "Save" },
+  });
+
+  for await (const attempt of drawer) {
+    // Stand-in for a server round-trip; the Save button shows its spinner meanwhile.
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+
+    if (attempt.data.string("name", "") === "nope") {
+      attempt.reject("That name is already taken.", "Could not save");
+    } else {
+      attempt.accept();
+    }
+  }
+
+  logFormResult("Drawer result", await drawer);
+}
+
 // -------------------------------------------------------------------
 // Page template — the whole demo UI lives here; index.html only hosts #app.
 // -------------------------------------------------------------------
@@ -635,10 +672,10 @@ const page = html`
         <div class="row">
           ${notifier("info")} ${notifier("success")} ${notifier("warn")}
           ${notifier("error")}
-          <button class="demo-btn" @click=${() => void runLoadingToast()}>
+          <button class="demo-btn featured" @click=${() => void runLoadingToast()}>
             Loading → Success
           </button>
-          <button class="demo-btn" @click=${() => void runLoadingWithProgress()}>
+          <button class="demo-btn featured" @click=${() => void runLoadingWithProgress()}>
             Loading with progress
           </button>
         </div>
@@ -673,11 +710,20 @@ const page = html`
       <section>
         <h2>Scope (sequential dialogs sharing one surface)</h2>
         <div class="row">
-          <button class="demo-btn" @click=${() => void runWizard()}>
+          <button class="demo-btn featured" @click=${() => void runWizard()}>
             Run 2-step wizard
           </button>
-          <button class="demo-btn" @click=${() => void runSlow()}>
+          <button class="demo-btn featured" @click=${() => void runSlow()}>
             Slow open (shows spinner placeholder)
+          </button>
+        </div>
+      </section>
+
+      <section>
+        <h2>Drawer</h2>
+        <div class="row">
+          <button class="demo-btn featured" @click=${() => void runDrawer()}>
+            Edit in drawer (reject on name "nope")
           </button>
         </div>
       </section>

@@ -40,6 +40,14 @@ const SHADOW_STYLES = `
   display: flex;
   align-items: center;
   gap: calc(12px * var(--toast-scale, 1));
+  /* Size of the close/countdown affordance, and the single lever for it (see
+     .close-wrap). */
+  --affordance-size: 1.9em;
+  /* Pin the card's minimum height to the affordance box plus the vertical padding, so a
+     collapsed affordance can't shorten the card. Without this, a toast that is both
+     sticky and non-dismissible — a loading toast, typically — drops .close-wrap out of
+     this flex row entirely and ends up shorter than every other toast. */
+  min-height: calc(var(--affordance-size) + 28px * var(--toast-scale, 1));
   /* Let vertical scroll pass through while we own horizontal swipe. */
   touch-action: pan-y;
 }
@@ -193,15 +201,22 @@ slot {
   color: var(--message-color, #374151);
 }
 
+/* --affordance-size (on :host) is the one size lever here: the ring fills this box via
+   inset: 0 and scales with it through its viewBox units, .close is sized in percentages
+   of it, and :host derives its min-height from it so collapsing this box never changes
+   the card's height. */
 .close-wrap {
   flex: none;
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 2.4em;
-  height: 2.4em;
-  margin-inline-end: -0.4em;
+  width: var(--affordance-size);
+  height: var(--affordance-size);
+  /* Pulls the affordance toward the card edge. Was -0.4em when the box was 2.4em with a
+     2em button inset inside it; -0.2em keeps the same optical gap now the button fills
+     the box. */
+  margin-inline-end: -0.2em;
 }
 
 /* Non-dismissible + nothing to count down: the whole affordance collapses. */
@@ -271,8 +286,9 @@ slot {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2em;
-  height: 2em;
+  /* Fills .close-wrap so that box stays the single size lever. */
+  width: 100%;
+  height: 100%;
   padding: 0;
   border: none;
   background: transparent;
@@ -289,8 +305,8 @@ slot {
 
 .close svg {
   display: block;
-  width: 1.15em;
-  height: 1.15em;
+  width: 0.9em;
+  height: 0.9em;
 }
 
 /* -------------------------------------------------------------------------

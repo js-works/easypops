@@ -18,6 +18,7 @@ export const defaultDialogTexts = {
   titleDecideCritical: "Please decide",
   titleForm: "Form",
   titleFormCritical: "Form",
+  titleDrawer: "Form",
 } as const;
 
 export type DialogTexts = Record<keyof typeof defaultDialogTexts, string>;

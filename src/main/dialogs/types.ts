@@ -23,7 +23,8 @@ export type DialogType =
   | "decide"
   | "decideCritical"
   | "form"
-  | "formCritical";
+  | "formCritical"
+  | "drawer";
 
 export type ActionButtonType = "primary" | "secondary" | "danger" | "success";
 
@@ -148,6 +149,16 @@ export interface FormDialogConfig<
   validate?(form: HTMLFormElement): boolean | Promise<boolean>;
 }
 
+/**
+ * A drawer is a form dialog on a different surface: instead of a centered box it is a
+ * full-height panel anchored to the inline-end edge (right in LTR, left in RTL). The
+ * interaction contract is form's, unchanged — same result, same retry iteration, same
+ * native-validation gating.
+ */
+export interface DrawerDialogConfig<
+  C extends object = never,
+> extends FormDialogConfig<C> {}
+
 export interface DialogsFunctions<C extends object = never> {
   info(config: InfoDialogConfig<C>): Promise<InfoDialogResult>;
   success(config: SuccessDialogConfig<C>): Promise<SuccessDialogResult>;
@@ -161,6 +172,20 @@ export interface DialogsFunctions<C extends object = never> {
   formCritical(config: FormDialogConfig<C>): Promise<FormDialogResult>;
   formAttempts(config: FormDialogConfig<C>): FormInteraction<C>;
   formCriticalAttempts(config: FormDialogConfig<C>): FormInteraction<C>;
+  /**
+   * A form on a drawer surface — a full-height panel sliding in from the inline-end edge,
+   * for edit-in-place flows too wide or too tall for a centered dialog. Still a modal
+   * `<dialog>`, so focus trapping, the inert background and Escape behave identically.
+   *
+   * Resolves exactly like {@link DialogsFunctions.form}: the first valid submit.
+   */
+  drawer(config: DrawerDialogConfig<C>): Promise<FormDialogResult>;
+  /**
+   * {@link DialogsFunctions.drawer} with per-attempt interception — the drawer equivalent
+   * of {@link DialogsFunctions.formAttempts}, and usually the one you want here: a wide
+   * edit panel is exactly where closing on submit and losing the input hurts most.
+   */
+  drawerAttempts(config: DrawerDialogConfig<C>): FormInteraction<C>;
 }
 
 export interface DialogsController<

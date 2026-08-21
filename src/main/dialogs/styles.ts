@@ -111,6 +111,50 @@ const dialogStyles = `
     min-width: 26em;
   }
 
+  /* ---- Drawer surface ------------------------------------------------------
+     Same modal <dialog> as every other type — only the geometry changes, so the focus
+     trap, inert background, Escape handling and ::backdrop all keep working untouched.
+     Undoes the centering above: auto on the start side pushes the panel to the inline-end
+     edge (right in LTR, left in RTL) and it fills the block axis. */
+  :host([data-dialog-type="drawer"]) dialog {
+    margin-inline-start: auto;
+    margin-inline-end: 0;
+    margin-block: 0;
+    width: min(calc(100dvw - 2em), 30em);
+    max-width: none;
+    /* The base rule's 22em floor would exceed the panel width on a narrow phone and push
+       content out of the viewport. */
+    min-width: 0;
+    height: 100dvh;
+    max-height: none;
+    border-radius: 0;
+    /* The panel itself doesn't scroll — its body does (below) — so the title and the
+       action buttons stay put on a long form. */
+    overflow: hidden;
+  }
+
+  :host([data-dialog-type="drawer"]) .dialog-content {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    /* Same reason as min-width above: the base 20em floor is wider than the panel on a
+       small screen. */
+    min-width: 0;
+  }
+
+  :host([data-dialog-type="drawer"]) .dialog-content .body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  /* Slides out to the edge rather than fading in place. The distance is a custom property
+     because transforms have no logical equivalent — the element sets it per writing
+     direction (see #growIn in element.ts). */
+  :host([data-dialog-type="drawer"]) dialog[open].closing {
+    animation: drawer-slide-out ${DIALOG_CLOSE_ANIM_MS}ms ease-in-out;
+  }
+
   #icon {
     flex: none;
     display: flex;
@@ -399,6 +443,13 @@ const dialogStyles = `
     overflow: visible;
   }
 
+
+  @keyframes drawer-slide-out {
+    to {
+      transform: translateX(var(--drawer-exit-translate, 100%));
+      opacity: 0;
+    }
+  }
 
   @keyframes dialog-fade-out {
     from { opacity: 1; }

@@ -163,6 +163,8 @@ export function createDialogsController<C extends object = never>(
     formCritical: (c) => oneShot((s) => s.formCritical(c)),
     formAttempts: (c) => oneShotForm((s) => s.formAttempts(c)),
     formCriticalAttempts: (c) => oneShotForm((s) => s.formCriticalAttempts(c)),
+    drawer: (c) => oneShot((s) => s.drawer(c)),
+    drawerAttempts: (c) => oneShotForm((s) => s.drawerAttempts(c)),
   };
 }
 
@@ -527,6 +529,7 @@ function createDialogScope<C extends object = never>(
     decideCritical: [yesBtnDanger, noBtn, cancelBtn],
     form: [confirmBtn, cancelBtn],
     formCritical: [confirmBtnDanger, cancelBtn],
+    drawer: [confirmBtn, cancelBtn],
   };
 
   const spec = (
@@ -538,7 +541,8 @@ function createDialogScope<C extends object = never>(
       `title${dialogType[0].toUpperCase()}${dialogType.slice(1)}` as TextKey,
     config,
     buttons: dialogButtons[dialogType],
-    allowsForm: dialogType.startsWith("form"),
+    // Drawers are form dialogs on another surface, so they get the <form> wrapper too.
+    allowsForm: dialogType.startsWith("form") || dialogType === "drawer",
   });
 
   const scope = {
@@ -559,6 +563,8 @@ function createDialogScope<C extends object = never>(
       openForm(spec("formCritical", c)) as Promise<FormDialogResult>,
     formAttempts: (c) => openForm(spec("form", c)),
     formCriticalAttempts: (c) => openForm(spec("formCritical", c)),
+    drawer: (c) => openForm(spec("drawer", c)) as Promise<FormDialogResult>,
+    drawerAttempts: (c) => openForm(spec("drawer", c)),
 
     close(): void {
       scopeLifetime.abort();

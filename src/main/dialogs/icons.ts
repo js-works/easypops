@@ -61,6 +61,7 @@ export function defaultDialogIcon(dialogType: DialogType): Renderable<any> {
       return parseSvg(confirmIconSvg);
     case "form":
     case "formCritical":
+    case "drawer":
       return null;
   }
 }

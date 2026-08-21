@@ -137,6 +137,7 @@ class Dialog extends DialogElementBase {
 
   #defaultButtonIndex: number | null = null;
   #hasForm = false;
+  #isDrawer = false;
   #renderOverrides: DialogRenderOverrides<any> | undefined;
   #adapter: ContentAdapter<any> | undefined;
   #onClose: () => void = () => {};
@@ -314,20 +315,37 @@ class Dialog extends DialogElementBase {
   }
 
   // The single entrance animation: grow the box in from nothing. Used for the spinner
-  // placeholder, the first real dialog, and every in-scope swap alike.
+  // placeholder, the first real dialog, and every in-scope swap alike. Drawers are the
+  // exception — an edge panel that scales up from nothing reads wrong, so it slides.
   #growIn(): void {
     const box = this.#dialog;
+    // Transforms have no logical equivalent, so the slide direction comes from the writing
+    // direction. Resolved to a literal here rather than passed as var(): custom properties
+    // are not substituted inside Web Animations keyframes. The same value is handed to CSS
+    // for the exit keyframe, which does resolve var() (see styles.ts).
+    let offscreen = "100%";
+    if (this.#isDrawer) {
+      offscreen =
+        getComputedStyle(this).direction === "rtl" ? "-100%" : "100%";
+      this.style.setProperty("--drawer-exit-translate", offscreen);
+    }
     // The spinner placeholder drops in from slightly above and settles; real dialogs
-    // (and in-scope swaps) grow in from nothing as before.
-    const keyframes = this.#spinnerOnly
+    // (and in-scope swaps) grow in from nothing as before. A drawer is a pure slide — no
+    // fade, so it reads as a panel arriving rather than a box appearing.
+    const keyframes = this.#isDrawer
       ? [
-          { transform: "translateY(-3em)", opacity: 0 },
-          { transform: "translateY(0)", opacity: 1 },
+          { transform: `translateX(${offscreen})` },
+          { transform: "translateX(0)" },
         ]
-      : [
-          { transform: "scale(0)", opacity: 0 },
-          { transform: "scale(1)", opacity: 1 },
-        ];
+      : this.#spinnerOnly
+        ? [
+            { transform: "translateY(-3em)", opacity: 0 },
+            { transform: "translateY(0)", opacity: 1 },
+          ]
+        : [
+            { transform: "scale(0)", opacity: 0 },
+            { transform: "scale(1)", opacity: 1 },
+          ];
     box.animate(keyframes, {
       duration: this.#spinnerOnly ? SPINNER_DROP_ANIM_MS : DIALOG_GROW_ANIM_MS,
       easing: "cubic-bezier(0.2, 0, 0, 1)",
@@ -359,6 +377,7 @@ class Dialog extends DialogElementBase {
     this.setAttribute("data-dialog-type", view.dialogType);
     this.#defaultButtonIndex = view.defaultButtonIndex;
     this.#hasForm = view.hasForm;
+    this.#isDrawer = view.dialogType === "drawer";
     this.#buttonViews = view.buttons;
     this.#renderOverrides = view.render;
     this.#adapter = view.adapter;
