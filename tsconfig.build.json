@@ -1,0 +1,18 @@
+{
+  // Library build: emit .js + .d.ts from src/main into dist/, mirroring the source tree
+  // so the package's `exports` entry points (index, lingo/*, xwiki) resolve to real files.
+  // Type-checking config lives in tsconfig.json; this only flips on emit. The demo
+  // (src/demo) is intentionally excluded — it's an app, not part of the published package.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "declaration": true,
+    "rootDir": "src/main",
+    "outDir": "dist",
+    // Emit requires this off; the source imports `.js` specifiers, never `.ts`, so it's unused.
+    "allowImportingTsExtensions": false,
+    // The library core needs no ambient @types (vite/client is only for the demo).
+    "types": []
+  },
+  "include": ["src/main"]
+}

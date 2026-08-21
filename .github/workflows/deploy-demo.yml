@@ -1,0 +1,58 @@
+# Publishes the src/demo app to GitHub Pages on every push to main (so: after a PR is
+# merged, or after a direct push). One-time setup in the repo is required for this to
+# work: Settings → Pages → Build and deployment → Source → "GitHub Actions".
+name: Deploy demo
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# The token permissions actions/deploy-pages needs.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# A newer push supersedes a queued run, but an in-flight deployment is never cancelled
+# half-way — that could leave the published site in a torn state.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          # No `cache: npm` on purpose: package-lock.json is gitignored, so there's no
+          # lockfile for the cache key to hash (and no `npm ci` either — see below).
+
+      # `npm install`, not `npm ci`, for the same reason: this repo doesn't commit a
+      # lockfile. Dependencies are pinned to exact versions in package.json instead.
+      - run: npm install
+
+      # BASE_PATH is derived from the repo name rather than hardcoded, so a rename or a
+      # fork publishes correctly without editing this file.
+      - name: Build demo
+        run: BASE_PATH="/${GITHUB_REPOSITORY#*/}/" npm run build:demo
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist-demo
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

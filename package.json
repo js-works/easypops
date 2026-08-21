@@ -1,0 +1,53 @@
+{
+  "name": "easypops",
+  "version": "0.0.1",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./picolingo": {
+      "types": "./dist/picolingo/index.d.ts",
+      "import": "./dist/picolingo/index.js"
+    },
+    "./picolingo/english": {
+      "types": "./dist/picolingo/english.d.ts",
+      "import": "./dist/picolingo/english.js"
+    },
+    "./picolingo/german": {
+      "types": "./dist/picolingo/german.d.ts",
+      "import": "./dist/picolingo/german.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "typecheck": "tsc",
+    "build": "tsc && rm -rf dist && tsc -p tsconfig.build.json",
+    "build:release": "npm run build && node scripts/pack-source.mts",
+    "build:demo": "vite build",
+    "preview": "vite preview",
+    "loc": "sloc src/main",
+    "loc:src": "sloc . --exclude 'node_modules|coverage|dist|\\.test\\.|\\.config\\.'",
+    "loc:json": "sloc src/main --format json"
+  },
+  "devDependencies": {
+    "@types/archiver": "7.0.0",
+    "archiver": "7.0.1",
+    "sloc": "0.3.2",
+    "typescript": "7.0.2",
+    "vite": "8.1.1"
+  },
+  "dependencies": {
+    "lit": "3.3.3"
+  },
+  "peerDependencies": {
+    "picolingo": "^0.0.1"
+  }
+}

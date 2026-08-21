@@ -1,0 +1,236 @@
+:root {
+  color-scheme: light;
+
+  /* The variable the library's theme reads; the rest fall back to the library's
+     own defaults. */
+  --ui-color-primary-500: #1677FF;
+
+  --page-bg: light-dark(#ffffff, #14161a);
+  --page-fg: light-dark(#1f2430, #e7e9ee);
+  --card-bg: light-dark(#f6f7f9, #1e2126);
+  --border: light-dark(#e3e5ea, #2b2f36);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 2rem 1.5rem;
+  background: var(--page-bg);
+  color: var(--page-fg);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+}
+
+#suggestion-combobox {
+  position: fixed;
+  top: 0.5rem;
+  left: 0.5rem;
+  width: 16rem;
+}
+
+.page {
+  display: flex;
+  gap: 2em;
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0.5rem 0 2rem;
+  user-select: none;
+}
+
+header {
+  margin-bottom: 2rem;
+}
+
+h1 {
+  margin: 0 0 0.25rem;
+  font-size: 1.9rem;
+  letter-spacing: -0.02em;
+}
+
+.tagline {
+  margin: 0;
+  opacity: 0.7;
+  font-size: 0.95rem;
+}
+
+section {
+  margin-bottom: 1.75rem;
+}
+
+h2 {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.55;
+  margin: 0 0 0.6rem;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.button-showcase .row {
+  align-items: center;
+}
+
+.row + .row {
+  margin-top: 0.5rem;
+}
+
+/* One column per variant (plus the leading appearance label), so a variant
+   lines up in the same column across every appearance row instead of each
+   row wrapping independently like .row does. */
+.button-grid {
+  display: grid;
+  grid-template-columns: auto repeat(5, auto);
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Native trigger buttons on the demo page (the dialogs' own buttons are separate).
+   Outline appearance: transparent fill, neutral border, subtle hover/active fill. */
+.demo-btn {
+  appearance: none;
+  -webkit-appearance: none;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 500;
+  line-height: 1.2;
+  color: var(--page-fg);
+  background: transparent;
+  border: 1px solid light-dark(#c3c7cf, #3a3f47);
+  border-radius: 3px;
+  padding: 0.4em 0.9em;
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease;
+}
+
+.demo-btn:hover {
+  background: light-dark(rgba(0, 0, 0, 0.04), rgba(255, 255, 255, 0.06));
+  border-color: light-dark(#9aa0aa, #565c66);
+}
+
+.demo-btn:active {
+  background: light-dark(rgba(0, 0, 0, 0.08), rgba(255, 255, 255, 0.1));
+}
+
+.demo-btn:focus-visible {
+  outline: 2px solid var(--ui-color-primary-500);
+  outline-offset: 1px;
+}
+
+.results {
+  min-width: 25em;
+}
+
+.data-navigator-section {
+  max-width: 960px;
+  margin: 0 auto;
+  padding-bottom: 2rem;
+}
+
+/* Kept in the markup (not deleted) so it's a one-line toggle to bring back. */
+.hidden-demo {
+  display: none;
+}
+
+pre#log {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0 1rem 1rem 1rem;
+  height: 30rem;
+  overflow: auto;
+  font-size: 0.82rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
+}
+
+/* Horizontal radio group — currently just the toast appearance picker. A plain div with
+   role="group" rather than a <fieldset>: a styled <legend> is laid out out-of-flow by
+   the UA and won't behave as a flex item in the row. */
+.choice-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.9rem;
+}
+
+/* Matches the section h2 treatment, so the group label reads as a peer of those. */
+.choice-group-label {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.55;
+}
+
+/* One radio + its text. A class rather than `.choice-group label`, because the group
+   caption is itself a <label> in the placement picker (for the select) and a descendant
+   element selector would out-specify .choice-group-label and restyle it. */
+.choice-option {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.choice-group input {
+  margin: 0;
+  accent-color: var(--ui-color-primary-500);
+  cursor: pointer;
+}
+
+.choice-group input:focus-visible {
+  outline: 2px solid var(--ui-color-primary-500);
+  outline-offset: 2px;
+}
+
+/* Native <select> for the toast placement, styled to match .demo-btn.
+
+   appearance: none because the UA-drawn chevron is a widget part, not an addressable
+   box: padding-inline-end nudges it in Blink/Gecko by a UA-specific amount and Safari
+   largely ignores it, so there's no portable way to set its distance from the border.
+   Drawing our own makes background-position the exact lever instead.
+
+   The chevron is a fixed gray rather than currentColor — a background-image can't
+   inherit it, and select renders no ::after to hang one on. Fine while :root pins
+   color-scheme: light; if this page ever goes light-dark, this needs a second image
+   under prefers-color-scheme (or a wrapper element carrying the arrow). */
+.demo-select {
+  appearance: none;
+  -webkit-appearance: none;
+  font: inherit;
+  font-size: 0.9rem;
+  line-height: 1.2;
+  color: var(--page-fg);
+  background-color: var(--page-bg);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%236b7280' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  /* This right inset IS the chevron's right margin — tune it here. */
+  background-position: right 0.7em center;
+  border: 1px solid light-dark(#c3c7cf, #3a3f47);
+  border-radius: 3px;
+  /* Right padding keeps the longest option text clear of the chevron. */
+  padding: 0.35em 2.1em 0.35em 0.5em;
+  cursor: pointer;
+  transition: border-color 120ms ease;
+}
+
+.demo-select:hover {
+  border-color: light-dark(#9aa0aa, #565c66);
+}
+
+.demo-select:focus-visible {
+  outline: 2px solid var(--ui-color-primary-500);
+  outline-offset: 1px;
+}
