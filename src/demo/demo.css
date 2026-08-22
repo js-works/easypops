@@ -127,8 +127,18 @@ h2 {
   outline-offset: 1px;
 }
 
+/* A flex column so the log itself can absorb the leftover height. .page is a flex row
+   with the default align-items: stretch, so this section is already as tall as the left
+   column — it was the log's fixed height that stopped it filling. The margin that every
+   other section carries is dropped here, or the log would end up short by that much. */
 .results {
-  min-width: 25em;
+  /* Width comes from this floor, not from content: the log wraps (pre-wrap) so it never
+     pushes the column wider on its own. The left column absorbs the difference, since
+     .page's max-width is fixed. */
+  min-width: 27em;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 0;
 }
 
 .data-navigator-section {
@@ -147,7 +157,11 @@ pre#log {
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 0 1rem 1rem 1rem;
-  height: 30rem;
+  /* Grows with the left column, but stops short of matching it fully; the floor keeps it
+     usable when that column is short. Both bounds are the tuning knobs here. */
+  flex: 1;
+  min-height: 20rem;
+  max-height: 40rem;
   overflow: auto;
   font-size: 0.82rem;
   white-space: pre-wrap;

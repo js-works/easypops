@@ -51,6 +51,11 @@ export const BACKDROP_FADE_OUT_ANIM_MS = 200;
 // a scope (the backdrop stays up; only the box content changes, then grows back in).
 export const SWAP_OUT_MS = 140;
 
+// Fade-out for the spinner placeholder when the real dialog is ready. Longer than
+// SWAP_OUT_MS: the placeholder is a small circle handing off to a much larger box, and a
+// swap that quick reads as a cut rather than a dissolve.
+export const SPINNER_SWAP_OUT_MS = 300;
+
 // If nothing opens within this delay, a round spinner dialog is shown as a placeholder.
 export const SPINNER_DIALOG_DELAY_MS = 300;
 

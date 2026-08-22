@@ -13,6 +13,7 @@ import {
   REJECT_MESSAGE_ANIM_MS,
   SPINNER_DROP_ANIM_MS,
   STYLE_TEXT,
+  SPINNER_SWAP_OUT_MS,
   SWAP_OUT_MS,
 } from "./styles.js";
 import type { ContentAdapter, Renderable } from "./content.js";
@@ -203,17 +204,24 @@ class Dialog extends DialogElementBase {
   // Set the dialog's view. If a dialog is already on screen (the spinner placeholder, or
   // the previous dialog in a scope), fade the current box out, then swap the new view in
   // and grow it back in — the <dialog> stays open, so the modal backdrop never drops.
-  // NOT for the spinner -> first-real handoff: fully fading the spinner out first leaves
-  // a visible gap, so there we swap and grow the real dialog straight in.
+  //
+  // The spinner -> first-real handoff uses the same path with a shorter fade. Nothing
+  // empty is ever on screen despite the fade, because grow-in begins on the exit
+  // animation's `finish` and its own first frame is opacity 0 — the placeholder dissolves
+  // straight into the arriving box rather than cutting to it.
   setView(view: DialogView): void {
     const dialog = this.#dialog;
-    if (dialog.open && !this.#spinnerOnly) {
+    if (dialog.open) {
       const exit = dialog.animate(
         [
           { opacity: 1, transform: "scale(1)" },
           { opacity: 0, transform: "scale(0.97)" },
         ],
-        { duration: SWAP_OUT_MS, easing: "ease-in", fill: "forwards" },
+        {
+          duration: this.#spinnerOnly ? SPINNER_SWAP_OUT_MS : SWAP_OUT_MS,
+          easing: "ease-in",
+          fill: "forwards",
+        },
       );
       this.#exitAnim = exit;
       exit.onfinish = () => {
@@ -221,13 +229,8 @@ class Dialog extends DialogElementBase {
         this.#growIn();
       };
     } else {
-      const wasOpen = dialog.open; // spinner placeholder already showing
       this.#applyView(view);
-      if (wasOpen) {
-        this.#growIn();
-      } else {
-        this.#show();
-      }
+      this.#show();
     }
   }
 

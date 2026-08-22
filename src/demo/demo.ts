@@ -132,12 +132,23 @@ const dialogs = createDialogsController({
 // Example form content, built from plain native form controls — no component library
 // involved, which is the point: the dialog only needs a `name` per field and leans on
 // native constraint validation, so `required` here is what blocks the confirm button.
-const formContent = () => html`
+// Optional starting values for the template below: the Forms demos pass nothing (a blank
+// form), the drawer passes a record, since "Edit customer" implies existing data.
+interface FormValues {
+  name?: string;
+  email?: string;
+  /** yyyy-mm-dd, the value format <input type="date"> expects. */
+  dateOfBirth?: string;
+  subscribe?: boolean;
+}
+
+const formContent = (values: FormValues = {}) => html`
   <label class="field">
     <span class="label-text">Name</span>
     <input
       name="name"
       placeholder="Jane Doe"
+      value=${values.name ?? ""}
       required
       autofocus
       autocomplete="off"
@@ -149,15 +160,27 @@ const formContent = () => html`
       type="email"
       name="email"
       placeholder="jane@example.com"
+      value=${values.email ?? ""}
       autocomplete="off"
     />
   </label>
   <label class="field">
     <span class="label-text">Date of birth</span>
-    <input type="date" name="dateOfBirth" required autocomplete="off" />
+    <input
+      type="date"
+      name="dateOfBirth"
+      value=${values.dateOfBirth ?? ""}
+      required
+      autocomplete="off"
+    />
   </label>
   <label class="check">
-    <input type="checkbox" name="subscribe" value="yes" />
+    <input
+      type="checkbox"
+      name="subscribe"
+      value="yes"
+      ?checked=${values.subscribe ?? false}
+    />
     Subscribe to updates
   </label>
 `;
@@ -377,8 +400,9 @@ async function runLoadingWithProgress(): Promise<void> {
   });
 
   try {
-    for (let percent = 20; percent <= 100; percent += 20) {
-      await new Promise((resolve) => setTimeout(resolve, 600));
+    // 10% steps at 300ms each — 10 updates across the same 3s the promise() demo takes.
+    for (let percent = 10; percent <= 100; percent += 10) {
+      await new Promise((resolve) => setTimeout(resolve, 300));
       toast.update({ message: `Uploading ${percent}%` });
     }
     // dismissible has to be switched back on by hand: settling patches only the fields
@@ -639,25 +663,41 @@ async function runLogin(): Promise<void> {
 // of the pair — a wide edit panel is exactly where you don't want to close on submit and
 // lose what was typed.
 async function runDrawer(): Promise<void> {
-  const drawer = dialogs.drawerAttempts({
-    title: "Edit customer",
-    content: formContent(),
-    styles: formStyles,
-    buttons: { confirm: "Save" },
-  });
+  // Opening a scope first is what makes the 1.5s load visible: the scope puts up the
+  // spinner placeholder after SPINNER_DIALOG_DELAY_MS and swaps in the real drawer when
+  // it's ready — the same shape as runSlow() above, which is how you'd fetch the record
+  // before showing the form.
+  const scope = dialogs.open();
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 1500));
 
-  for await (const attempt of drawer) {
-    // Stand-in for a server round-trip; the Save button shows its spinner meanwhile.
-    await new Promise((resolve) => setTimeout(resolve, 1200));
+    const drawer = scope.drawerAttempts({
+      title: "Edit customer",
+      content: formContent({
+        name: "Jane Doe",
+        email: "jane.doe@example.com",
+        dateOfBirth: "1988-04-17",
+        subscribe: true,
+      }),
+      styles: formStyles,
+      buttons: { confirm: "Save" },
+    });
 
-    if (attempt.data.string("name", "") === "nope") {
-      attempt.reject("That name is already taken.", "Could not save");
-    } else {
-      attempt.accept();
+    for await (const attempt of drawer) {
+      // Stand-in for a server round-trip; the Save button shows its spinner meanwhile.
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+
+      if (attempt.data.string("name", "") === "nope") {
+        attempt.reject("That name is already taken.", "Could not save");
+      } else {
+        attempt.accept();
+      }
     }
-  }
 
-  logFormResult("Drawer result", await drawer);
+    logFormResult("Drawer result", await drawer);
+  } finally {
+    scope.close();
+  }
 }
 
 // -------------------------------------------------------------------
@@ -720,19 +760,19 @@ const page = html`
       </section>
 
       <section>
-        <h2>Drawer</h2>
+        <h2>Form retry with reject message</h2>
         <div class="row">
-          <button class="demo-btn featured" @click=${() => void runDrawer()}>
-            Edit in drawer (reject on name "nope")
+          <button class="demo-btn featured" @click=${() => void runLogin()}>
+            Login (retry until password is "secret")
           </button>
         </div>
       </section>
 
       <section>
-        <h2>Form retry with reject message</h2>
+        <h2>Drawer</h2>
         <div class="row">
-          <button class="demo-btn" @click=${() => void runLogin()}>
-            Login (retry until password is "secret")
+          <button class="demo-btn featured" @click=${() => void runDrawer()}>
+            Edit in drawer (reject on name "nope")
           </button>
         </div>
       </section>
