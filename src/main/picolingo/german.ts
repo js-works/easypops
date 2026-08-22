@@ -6,10 +6,10 @@ export { germanTexts };
 const germanTexts = bundleTexts({
   de: [
     allTexts(dialogTexts, {
-      ok: "Ok",
-      cancel: "Abbrechen",
-      yes: "Ja",
-      no: "Nein",
+      buttonOk: "Ok",
+      buttonCancel: "Abbrechen",
+      buttonYes: "Ja",
+      buttonNo: "Nein",
       titleInfo: "Information",
       titleSuccess: "Erfolg",
       titleWarn: "Warnung",

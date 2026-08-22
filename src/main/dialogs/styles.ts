@@ -398,6 +398,13 @@ const dialogStyles = `
      JS-driven height animation. */
   .reject-message {
     margin: 0;
+    /* Load-bearing for the animation, not cosmetic. #animateRejectMessageHeight measures
+       getBoundingClientRect().height — a border-box figure — and animates the "height"
+       property to it. Under the default content-box that end frame renders 2px taller
+       than the element's natural size (the two 1px borders sit outside the animated
+       height), so clearing the inline height on finish snapped it back by 2px at full
+       opacity. Matching the box model to the measurement removes that jump. */
+    box-sizing: border-box;
     border: none;
     border-top: 1px solid #e8e8e8;
     border-bottom: 1px solid #e8e8e8;

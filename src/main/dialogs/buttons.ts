@@ -42,11 +42,11 @@ function btn(
   };
 }
 
-export const okBtn = btn(symbolOk, "ok", "primary", "ok");
-export const okBtnDanger = btn(symbolOk, "ok", "danger", "ok");
-export const confirmBtn = btn(symbolConfirm, "confirm", "primary", "ok");
-export const confirmBtnDanger = btn(symbolConfirm, "confirm", "danger", "ok");
-export const cancelBtn = btn(symbolCancel, "cancel", "secondary", "cancel");
-export const yesBtn = btn(symbolConfirm, "yes", "primary", "yes");
-export const yesBtnDanger = btn(symbolConfirm, "yes", "danger", "yes");
-export const noBtn = btn(symbolDecline, "no", "secondary", "no");
+export const okBtn = btn(symbolOk, "ok", "primary", "buttonOk");
+export const okBtnDanger = btn(symbolOk, "ok", "danger", "buttonOk");
+export const confirmBtn = btn(symbolConfirm, "confirm", "primary", "buttonOk");
+export const confirmBtnDanger = btn(symbolConfirm, "confirm", "danger", "buttonOk");
+export const cancelBtn = btn(symbolCancel, "cancel", "secondary", "buttonCancel");
+export const yesBtn = btn(symbolConfirm, "yes", "primary", "buttonYes");
+export const yesBtnDanger = btn(symbolConfirm, "yes", "danger", "buttonYes");
+export const noBtn = btn(symbolDecline, "no", "secondary", "buttonNo");
