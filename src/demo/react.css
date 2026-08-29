@@ -1,0 +1,136 @@
+/* Page-level styling for the React form demo. Loaded after Mantine's own stylesheet, so
+   these rules win on equal specificity.
+
+   The validation message is a floating badge tied to focus: it belongs to the field being
+   worked on, so only that one shows it. Three things follow.
+
+   - Nothing moves when a message appears or goes. In the flow, three messages appearing at
+     once push every field below them down, which is exactly when the user is reading them.
+   - The badge hangs over the field below and covers part of its label - which is why only
+     the focused field shows one. At most one is ever on screen, and it belongs to the
+     field the user is currently in.
+   - The JSX needs to know nothing about any of it. Mantine unmounts the message the moment
+     a field turns valid, and that is the wanted behaviour here rather than a limitation.
+
+   position: absolute, not fixed. Fixed positions against the viewport, so the badge would
+   sit still while the dialog body scrolled and drift away from its field. Absolute against
+   the field wrapper keeps the two together. The cost is that an absolute box is still
+   clipped by the dialog's overflow, so the badge hangs below its field rather than out to
+   the side, where there is no room for it.
+
+   Note the transition lives on the *focused* rule, not the base one: a property only
+   animates towards a state that declares a transition, so this fades in and cuts out. */
+
+.mantine-InputWrapper-root {
+  position: relative;
+}
+
+/* Mantine reserves 5px under the input when a message is present, to sit it on. The badge
+   is out of flow, so that reservation would only push the next field down. Overriding the
+   property rather than --input-margin-bottom, which Input sets as an inline style. */
+.mantine-InputWrapper-root .mantine-TextInput-wrapper {
+  margin-bottom: 0;
+}
+
+/* The field icons (see FORMAT_ICONS) hand their click on to the input, so they read as
+   part of the control rather than decoration sitting on top of it. */
+.mantine-InputWrapper-root [data-position="right"] {
+  cursor: pointer;
+}
+
+/* Clicking a label focuses its field, so a double-click selects the label text as a side
+   effect and looks broken. Labels only: the library already opts the dialog body back into
+   text selection (see .body in dialogs/element/styles.ts) precisely so messages and values
+   can be copied, and that is worth keeping. */
+.mantine-InputWrapper-label {
+  user-select: none;
+}
+
+.mantine-TextInput-error {
+  --badge-bg: #d64545;
+  /* Height of the nose, and the clear space left above its tip. The badge stands off the
+     field by the sum, so the triangle sits in that gap without touching the input. Both in
+     em: they are proportions of the message's own text, not of the page. */
+  --nose: 0.35em;
+  --nose-gap: 0.12em;
+
+  position: absolute;
+  z-index: 1;
+  top: 100%;
+  inset-inline-start: 0;
+  max-width: 100%;
+  width: max-content;
+
+  margin-block-start: calc(var(--nose) + var(--nose-gap));
+  padding: 0.35em 0.55em;
+  border-radius: 0.45em;
+
+  display: flex;
+  align-items: center;
+  gap: 0.35em;
+
+  background: var(--badge-bg);
+  color: #fff;
+  font-size: 0.78rem;
+  line-height: 1.35;
+
+  /* It overlaps the field below, so it has to read as a layer of its own. */
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.25);
+
+  /* Hidden rather than unmounted: the input's aria-describedby points here, and a
+     description is worth having whether or not the field is focused. */
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-0.25em);
+}
+
+/* The warning triangle, as a mask rather than an <img> or a background image: the shape
+   comes from the SVG's alpha and the colour from background-color, so it inherits the
+   badge's currentColor and needs no second copy for another colour scheme. It is pure
+   decoration - the message beside it says everything - so it lives in CSS and never
+   reaches the accessibility tree.
+
+   fill-rule evenodd is what makes the exclamation mark a hole in the triangle rather than
+   a shape drawn on top of it; against an alpha mask, a filled mark would read as solid. */
+.mantine-TextInput-error::before {
+  --warning-triangle: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' fill-rule='evenodd' d='M12 2 1 21h22L12 2Zm1 8h-2v5h2v-5Zm0 7h-2v2h2v-2Z'/%3E%3C/svg%3E");
+
+  content: "";
+  flex: none;
+  inline-size: 1.05em;
+  block-size: 1.05em;
+  background-color: currentColor;
+  mask: var(--warning-triangle) center / contain no-repeat;
+  -webkit-mask: var(--warning-triangle) center / contain no-repeat;
+}
+
+/* The nose. A zero-height box with thick borders, where only the bottom one is painted:
+   what shows is a triangle pointing up at the field it belongs to. It sits in the gap the
+   margin opens above the badge; --nose-gap keeps its tip clear of the field's border.
+
+   No box-shadow on it - a shadow would trace the border box, not the visible triangle, and
+   draw a rectangle in mid-air. The badge's own shadow is enough to lift the pair. */
+.mantine-TextInput-error::after {
+  content: "";
+  position: absolute;
+  bottom: 100%;
+  inset-inline-start: 0.9em;
+  border: var(--nose) solid transparent;
+  border-block-start-width: 0;
+  border-block-end-color: var(--badge-bg);
+}
+
+.mantine-InputWrapper-root:has(input:focus) .mantine-TextInput-error {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  transition:
+    opacity 140ms ease-out,
+    transform 140ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mantine-InputWrapper-root:has(input:focus) .mantine-TextInput-error {
+    transition: none;
+  }
+}

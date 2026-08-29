@@ -2,7 +2,8 @@
 // # Styles & timing
 // -------------------------------------------------------------------
 
-import { defaultDialogTheme } from "./theme.js";
+import { css } from "../../internal/css.js";
+import { defaultDialogTheme } from "../contract/theme.js";
 
 // Interim application mechanism: each token is a `--dialog-*` custom property (set from
 // the controller's `theme` option, see createDialogsController) whose inline fallback is
@@ -27,7 +28,7 @@ const theme = {
   buttonActiveScale: `var(--dialog-button-active-scale, ${defaultDialogTheme.buttonActiveScale})`,
 } as const;
 
-// Duration of the reject message appear/disappear (collapse) animation. Drives both the
+// Duration of the note appear/disappear (collapse) animation. Drives both the
 // CSS transition and the JS timer that removes the element after the collapse finishes.
 export const REJECT_MESSAGE_ANIM_MS = 450;
 
@@ -65,7 +66,7 @@ export const BUTTON_SPINNER_DELAY_MS = 150;
 // Belt-and-braces close timeout in case the close animation's `animationend` never fires.
 export const CLOSE_ANIMATION_FALLBACK_MS = DIALOG_CLOSE_ANIM_MS + 100;
 
-const dialogStyles = `
+const dialogStyles = css`
   dialog {
     outline: none;
     position: fixed;
@@ -121,7 +122,8 @@ const dialogStyles = `
      trap, inert background, Escape handling and ::backdrop all keep working untouched.
      Undoes the centering above: auto on the start side pushes the panel to the inline-end
      edge (right in LTR, left in RTL) and it fills the block axis. */
-  :host([data-dialog-type="drawer"]) dialog {
+  :host([data-dialog-type="drawer"]) dialog,
+  :host([data-dialog-type="drawerCritical"]) dialog {
     margin-inline-start: auto;
     margin-inline-end: 0;
     margin-block: 0;
@@ -138,7 +140,8 @@ const dialogStyles = `
     overflow: hidden;
   }
 
-  :host([data-dialog-type="drawer"]) .dialog-content {
+  :host([data-dialog-type="drawer"]) .dialog-content,
+  :host([data-dialog-type="drawerCritical"]) .dialog-content {
     display: flex;
     flex-direction: column;
     height: 100%;
@@ -147,7 +150,8 @@ const dialogStyles = `
     min-width: 0;
   }
 
-  :host([data-dialog-type="drawer"]) .dialog-content .body {
+  :host([data-dialog-type="drawer"]) .dialog-content .body,
+  :host([data-dialog-type="drawerCritical"]) .dialog-content .body {
     flex: 1;
     min-height: 0;
     overflow-y: auto;
@@ -156,8 +160,17 @@ const dialogStyles = `
   /* Slides out to the edge rather than fading in place. The distance is a custom property
      because transforms have no logical equivalent — the element sets it per writing
      direction (see #growIn in element.ts). */
-  :host([data-dialog-type="drawer"]) dialog[open].closing {
+  :host([data-dialog-type="drawer"]) dialog[open].closing,
+  :host([data-dialog-type="drawerCritical"]) dialog[open].closing {
     animation: drawer-slide-out ${DIALOG_CLOSE_ANIM_MS}ms ease-in-out;
+  }
+
+  /* Hidden rather than absent when the dialog has no icon: the adapter renders a fixed
+     set of slot wrappers (that is what lets a framework diff them), so an empty one is
+     always assigned and would otherwise claim the header's gap. The id selector beats the
+     UA [hidden] rule, hence the explicit pairing. */
+  #icon[hidden] {
+    display: none;
   }
 
   #icon {
@@ -198,7 +211,7 @@ const dialogStyles = `
   }
 
   .dialog-content {
-    /* Chrome (titles, buttons) stays unselectable; the body and reject message opt back
+    /* Chrome (titles, buttons) stays unselectable; the body and note opt back
        into text selection below so error messages can be copied. */
     user-select: none;
     min-width: 20em;
@@ -248,6 +261,24 @@ const dialogStyles = `
     /* Even out line lengths for the short message blocks; progressively enhanced —
        browsers without support fall back to normal wrapping. */
     text-wrap: balance;
+  }
+
+  /* One shadow-side part per body slot, so an empty intro/outro can be taken out of the
+     flex flow — the row gap above would otherwise show around nothing. It has to be a
+     shadow element: styling the slotted wrapper instead is not an option, since any rule
+     in the outer tree beats ::slotted() regardless of specificity. */
+  .dialog-content .body > .part {
+    min-width: 0;
+  }
+  .dialog-content .body > .part[hidden] {
+    display: none;
+  }
+
+  /* Turns "\n" in a caller's plain string into a line break. Set only on slots the
+     element has found to hold text and no markup (see #syncSlotPresence) — a Lit or JSX
+     template is full of source-formatting newlines that must stay collapsed. */
+  .pre-line {
+    white-space: pre-line;
   }
 
   .dialog-content .footer {
@@ -383,12 +414,12 @@ const dialogStyles = `
     );
   }
 
-  /* Reject message (see FormAttempt.reject): lives inside the footer (see element.ts
-     #setRejectMessage), as its first child — flush against the footer's top border
+  /* Note (see FormAttempt.reject): lives inside the footer (see element.ts
+     #buildChrome), as its first child — flush against the footer's top border
      (the divider line) with no gap, and edge-to-edge across the dialog with no rounding.
      Flat fill, normal text color, reddish icon.
 
-     The enter/exit collapse is animated in JS (element.ts #animateRejectMessageHeight)
+     The enter/exit collapse is animated in JS (element.ts #animateNoteHeight)
      via the Web Animations API, using the element's actual measured height rather than a
      CSS transition — a height transition needs a concrete end value and "auto" isn't
      one. Two CSS-only workarounds were tried and discarded: an oversized max-height
@@ -396,14 +427,24 @@ const dialogStyles = `
      icon and text visibly diverged), and an animated CSS Grid fr track wasn't reliably
      smooth across engines. overflow: hidden below just clips content during that
      JS-driven height animation. */
-  .reject-message {
+  /* The animated wrapper. It is the element whose height is driven (see
+     #animateNoteHeight), and it stays in the chrome for the dialog's whole life —
+     only its slots fill and empty — so the collapse has something stable to run on. */
+  .note-region {
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+  /* Collapsed rather than display:none so the region stays in the accessibility tree and
+     its role="alert" can announce (see #buildChrome). Its own overflow does the hiding,
+     and the JS height animation overrides this while it plays. */
+  .note-region.collapsed {
+    height: 0;
+  }
+
+  .note {
     margin: 0;
-    /* Load-bearing for the animation, not cosmetic. #animateRejectMessageHeight measures
-       getBoundingClientRect().height — a border-box figure — and animates the "height"
-       property to it. Under the default content-box that end frame renders 2px taller
-       than the element's natural size (the two 1px borders sit outside the animated
-       height), so clearing the inline height on finish snapped it back by 2px at full
-       opacity. Matching the box model to the measurement removes that jump. */
+    /* Border-box so the two 1px borders sit inside the natural height the wrapper
+       measures, rather than adding to it. */
     box-sizing: border-box;
     border: none;
     border-top: 1px solid #e8e8e8;
@@ -417,14 +458,14 @@ const dialogStyles = `
     overflow: hidden;
   }
 
-  .reject-message-inner {
+  .note-inner {
     display: flex;
     align-items: center;
     gap: 0.85em;
     padding: 0.85em 1.5em;
   }
 
-  .reject-message .reject-message-icon {
+  .note .note-icon {
     flex: none;
     display: flex;
     align-items: center;
@@ -433,20 +474,20 @@ const dialogStyles = `
     color: ${theme.dangerBackgroundColor};
   }
 
-  .reject-message-body {
+  .note-body {
     min-width: 0;
     display: flex;
     flex-direction: column;
     gap: 1px;
   }
-  .reject-message-title {
+  .note-title {
     font-weight: 600;
     line-height: 1.15;
   }
-  .reject-message-text {
+  .note-text {
     line-height: 1.25;
   }
-  .reject-message-icon svg {
+  .note-icon svg {
     display: block;
     width: 1em;
     height: 1em;
@@ -484,7 +525,7 @@ const dialogStyles = `
   }
 `;
 
-const placeholderStyles = `
+const placeholderStyles = css`
   :host {
     display: contents;
   }
@@ -514,4 +555,4 @@ const placeholderStyles = `
   }
 `;
 
-export const STYLE_TEXT = dialogStyles + placeholderStyles;
+export const styleText = dialogStyles + placeholderStyles;

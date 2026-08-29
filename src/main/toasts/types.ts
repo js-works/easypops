@@ -3,6 +3,7 @@
 // -------------------------------------------------------------------
 
 import type { Severity } from "../internal/severity.js";
+import type { ToastControllerOptions } from "./options.js";
 
 export type ToastType = Severity | "loading";
 
@@ -168,6 +169,19 @@ export interface ToastController<C> {
    * {@link ToastController.destroy}.
    */
   clear(): void;
+  /**
+   * Replace this controller's options — everything except the `adapter`, which is bound
+   * to the stack for the controller's life.
+   *
+   * A wholesale replacement, not a merge: anything left out returns to its default, so
+   * what you pass is always the complete truth about the controller. Toasts already on
+   * screen are kept and re-rendered, not discarded — placement, theme, size and the
+   * per-toast policies all take effect in place.
+   *
+   * Use it instead of destroying and rebuilding a controller to change, say, placement:
+   * rebuilding would take the visible stack down with it.
+   */
+  configure(options: Omit<ToastControllerOptions<C>, "adapter">): void;
   /** Tear down: cancel timers, drop toasts, remove listeners + container. */
   destroy(): void;
 }

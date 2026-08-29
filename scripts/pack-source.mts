@@ -3,7 +3,7 @@ import { createWriteStream } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { mkdir } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
-import archiver from "archiver";
+import { ZipArchive } from "archiver";
 import pkg from "../package.json" with { type: "json" };
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
@@ -33,7 +33,7 @@ await mkdir(targetDir, { recursive: true });
 
 await new Promise<void>((resolve_, reject) => {
   const output = createWriteStream(targetFile);
-  const archive = archiver("zip", { zlib: { level: 9 } });
+  const archive = new ZipArchive({ zlib: { level: 9 } });
 
   // The file is only guaranteed complete on 'close'.
   output.on("close", () => resolve_());

@@ -1,11 +1,10 @@
 import { html, render } from "lit";
 
-import {
-  createDialogsController,
-  createToastController,
-  litToastAdapter,
-  litDialogAdapter,
-} from "../main/index.js";
+import { createDialogsController, createToastController } from "../main/index.js";
+
+// The lit adapters live behind their own entry point (published as "easypops/lit") so the
+// main entry stays framework-free.
+import { litDialogAdapter, litToastAdapter } from "../main/bindings/lit/index.js";
 
 import type {
   DialogType,
@@ -39,7 +38,11 @@ function logFormResult(label: string, result: FormDialogResult): void {
   }
 }
 
-const plusIcon = html`
+// Orphans from a button-showcase demo that isn't wired up any more (its .button-grid /
+// .button-showcase rules are still in demo.css). Kept rather than deleted — there are no
+// commits in this repo yet, so deleting is not recoverable. `export` is what stops
+// noUnusedLocals flagging them; it reports unused *locals*, not unused exports.
+export const plusIcon = html`
   <svg
     viewBox="0 0 16 16"
     width="1em"
@@ -53,7 +56,7 @@ const plusIcon = html`
   </svg>
 `;
 
-const pencilIcon = html`
+export const pencilIcon = html`
   <svg
     viewBox="0 0 16 16"
     width="1em"
@@ -67,7 +70,7 @@ const pencilIcon = html`
   </svg>
 `;
 
-const trashIcon = html`
+export const trashIcon = html`
   <svg
     viewBox="0 0 16 16"
     width="1em"
@@ -91,6 +94,7 @@ const trashIcon = html`
 const INITIAL_APPEARANCE: ToastAppearance = "light";
 const INITIAL_PLACEMENT: Placement = "top-end";
 const INITIAL_SIZE: ToastSize = "medium";
+const INITIAL_STACKED: StackedChoice = "no";
 
 // Annotated, not inferred: TypeScript narrows the consts above to their literal types,
 // so `let appearance = INITIAL_APPEARANCE` would be typed `"light"` and reject any other
@@ -98,35 +102,39 @@ const INITIAL_SIZE: ToastSize = "medium";
 let appearance: ToastAppearance = INITIAL_APPEARANCE;
 let placement: Placement = INITIAL_PLACEMENT;
 let size: ToastSize = INITIAL_SIZE;
+let stacked: StackedChoice = INITIAL_STACKED;
 
-function createToasts() {
-  return createToastController({
-    adapter: litToastAdapter,
+function toastOptions() {
+  return {
     maxVisible: 4,
     autoTitles: false,
     autoIcons: true,
     appearance,
     placement,
     size,
+    stacked: stacked === "yes",
     overflow: "evict",
-  });
+  } as const;
 }
 
-let toasts = createToasts();
+const toasts = createToastController({
+  adapter: litToastAdapter,
+  ...toastOptions(),
+});
 
-// destroy() clears the outgoing controller's timers and listeners and removes its stack
-// container, so any toasts currently on screen go with it.
-function rebuildToasts(): void {
-  toasts.destroy();
-  toasts = createToasts();
+// The pickers below change options the controller was created with. configure() replaces
+// them on the live controller, so the stack currently on screen moves to the new corner /
+// appearance instead of being destroyed and rebuilt with it.
+function reconfigureToasts(): void {
+  toasts.configure(toastOptions());
 }
 
-// A single controller for the whole page. getText / getDialogIcon are optional;
+// A single controller for the whole page. getText / icons are optional;
 // omitting them uses the library's built-in English texts and default icons, and the
 // library's own (native) action buttons.
 const dialogs = createDialogsController({
   adapter: litDialogAdapter,
-  autoIcons: true,
+  icons: true,
 });
 
 // Example form content, built from plain native form controls — no component library
@@ -419,6 +427,11 @@ async function runLoadingWithProgress(): Promise<void> {
 const APPEARANCES: readonly ToastAppearance[] = ["light", "solid", "dark"];
 const SIZES: readonly ToastSize[] = ["small", "medium", "large"];
 
+// radioGroup labels its options from their values, so the choice is spelled yes/no rather
+// than kept as a boolean and translated at the last moment.
+type StackedChoice = "no" | "yes";
+const STACKED_CHOICES: readonly StackedChoice[] = ["no", "yes"];
+
 const PLACEMENTS: readonly Placement[] = [
   "top-start",
   "top-center",
@@ -458,7 +471,7 @@ function radioGroup<T extends string>(
               autocomplete="off"
               @change=${() => {
                 pick(option);
-                rebuildToasts();
+                reconfigureToasts();
                 log(`Toast ${label.toLowerCase()}`, option);
               }}
             />
@@ -486,6 +499,19 @@ const sizePicker = () =>
     size = value;
   });
 
+// Worth raising several toasts before switching this on: a single one has nothing to
+// stack behind it, so the difference only shows from the second one onward.
+const stackedPicker = () =>
+  radioGroup(
+    "toast-stacked",
+    "Stacked",
+    STACKED_CHOICES,
+    INITIAL_STACKED,
+    (value) => {
+      stacked = value;
+    },
+  );
+
 // A <select> here rather than a radio row like the two groups above: six options with
 // two-word labels would wrap across several lines in this column, where a select stays
 // one compact control. Same one-of-many semantics either way.
@@ -498,7 +524,7 @@ const placementPicker = () => html`
       autocomplete="off"
       @change=${(event: Event) => {
         placement = (event.target as HTMLSelectElement).value as Placement;
-        rebuildToasts();
+        reconfigureToasts();
         log("Toast placement", placement);
       }}
     >
@@ -547,7 +573,7 @@ async function runWizard(): Promise<void> {
 
     logFormResult("Wizard finished", step2);
   } finally {
-    scope.close();
+    scope.dispose();
   }
 }
 
@@ -577,7 +603,7 @@ async function runSlow(): Promise<void> {
     });
     log("slow open result", result);
   } finally {
-    scope.close();
+    scope.dispose();
   }
 }
 
@@ -589,7 +615,7 @@ async function runSlow(): Promise<void> {
 async function runLogin(): Promise<void> {
   const session = dialogs.open();
   try {
-    const login = session.formAttempts({
+    const login = session.form({
       title: "Sign in",
       content: html`
         <label class="field">
@@ -598,7 +624,6 @@ async function runLogin(): Promise<void> {
             type="email"
             name="email"
             required
-            value="jane.doe@gmail.com"
             autofocus
             autocomplete="off"
           />
@@ -612,7 +637,6 @@ async function runLogin(): Promise<void> {
             type="password"
             name="password"
             required
-            value="xyz"
             autocomplete="new-password"
           />
         </label>
@@ -637,15 +661,17 @@ async function runLogin(): Promise<void> {
       }
     }
 
-    if (!login.result?.canceled) {
+    // The loop ends when the dialog settles, so awaiting it here resolves immediately —
+    // no separate `result` field needed to find out how it ended.
+    const result = await login;
+
+    if (!result.canceled) {
       await session.success({
         content: "Congratulations! You are logged in.",
       });
     }
 
-    // After the loop, `result` says whether the form was confirmed or canceled.
-    const result = login.result;
-    if (!result || result.canceled) {
+    if (result.canceled) {
       log("login canceled", result);
     } else {
       log("Login result", {
@@ -654,14 +680,13 @@ async function runLogin(): Promise<void> {
       });
     }
   } finally {
-    session.close();
+    session.dispose();
   }
 }
 
 // The drawer surface: the same form contract as runLogin() above, on a full-height panel
-// at the inline-end edge. Uses drawerAttempts() rather than drawer(), which is the point
-// of the pair — a wide edit panel is exactly where you don't want to close on submit and
-// lose what was typed.
+// at the inline-end edge. Iterated rather than plain-awaited: a wide edit panel is exactly
+// where you don't want to close on submit and lose what was typed.
 async function runDrawer(): Promise<void> {
   // Opening a scope first is what makes the 1.5s load visible: the scope puts up the
   // spinner placeholder after SPINNER_DIALOG_DELAY_MS and swaps in the real drawer when
@@ -671,7 +696,7 @@ async function runDrawer(): Promise<void> {
   try {
     await new Promise((resolve) => setTimeout(resolve, 1500));
 
-    const drawer = scope.drawerAttempts({
+    const drawer = scope.drawer({
       title: "Edit customer",
       content: formContent({
         name: "Jane Doe",
@@ -696,8 +721,39 @@ async function runDrawer(): Promise<void> {
 
     logFormResult("Drawer result", await drawer);
   } finally {
-    scope.close();
+    scope.dispose();
   }
+}
+
+// The same drawer surface with destructive styling: danger-coloured confirm button, and
+// no Enter-to-confirm — so an irreversible save can't be triggered by a stray Return in
+// one of the fields. Awaited rather than iterated, which is all the short form is.
+async function runDrawerCritical(): Promise<void> {
+  const result = await dialogs.drawerCritical({
+    title: "Delete customer",
+    intro:
+      'This permanently deletes "Jane Doe" and every associated record. Confirm by typing the customer name.',
+    content: html`
+      <label class="field">
+        <span class="label-text">Customer name</span>
+        <input
+          name="confirmName"
+          placeholder="Jane Doe"
+          required
+          autofocus
+          autocomplete="off"
+        />
+      </label>
+      <label class="check">
+        <input type="checkbox" name="acknowledge" value="yes" required />
+        I understand this cannot be undone
+      </label>
+    `,
+    styles: formStyles,
+    buttons: { confirm: "Delete" },
+  });
+
+  logFormResult("Critical drawer result", result);
 }
 
 // -------------------------------------------------------------------
@@ -721,6 +777,7 @@ const page = html`
         </div>
         <div class="row">${appearancePicker()}</div>
         <div class="row">${sizePicker()}</div>
+        <div class="row">${stackedPicker()}</div>
         <div class="row">${placementPicker()}</div>
       </section>
 
@@ -773,6 +830,9 @@ const page = html`
         <div class="row">
           <button class="demo-btn featured" @click=${() => void runDrawer()}>
             Edit in drawer (reject on name "nope")
+          </button>
+          <button class="demo-btn" @click=${() => void runDrawerCritical()}>
+            Delete in drawer (critical)
           </button>
         </div>
       </section>

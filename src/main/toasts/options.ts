@@ -37,7 +37,7 @@ export type ToastSize = "small" | "medium" | "large";
 export interface ToastControllerOptions<C> {
   /**
    * The rendering adapter, which also fixes the content type `C`. Use the
-   * built-in {@link litToastAdapter} or {@link vanillaAdapter}, or build one with
+   * built-in {@link litToastAdapter} or {@link domToastAdapter}, or build one with
    * {@link createReactAdapter}.
    */
   adapter: ToastAdapterFactory<C>;
@@ -79,6 +79,17 @@ export interface ToastControllerOptions<C> {
   overflow?: OverflowMode;
   /** Corner the stack is anchored to. Defaults to `"bottom-end"`. */
   placement?: Placement;
+  /**
+   * Lay the toasts on top of each other instead of side by side, with the older ones
+   * peeking out behind the newest. The stack expands to the ordinary list whenever the
+   * user reaches for it — pointer over it, a tap on any card, or focus moving inside —
+   * and collapses again when they leave. Default `false` (the flat list).
+   *
+   * Only the presentation changes. How many toasts exist at once is still
+   * {@link ToastControllerOptions.maxVisible} and {@link ToastControllerOptions.overflow};
+   * there is no second cap here.
+   */
+  stacked?: boolean;
   /** Allow horizontal swipe-to-dismiss (toward the anchored edge). Default `true`. */
   dismissOnSwipe?: boolean;
   /** Freeze auto-dismiss timers while the tab is backgrounded. Default `true`. */

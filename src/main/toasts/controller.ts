@@ -9,9 +9,14 @@ import { DISMISS_EVENT, ensureElementRegistered } from "./element.js";
 import { applyPlacement, splitPlacement } from "./placement.js";
 import { injectContainerStyles } from "./styles.js";
 import { defaultToastTheme } from "./theme.js";
-import { defaultToastTexts } from "./texts.js";
+import { bundledToastText } from "../i18n/texts.js";
 import { policyEnabled, roleFor } from "./view.js";
-import type { ToastSize, ToastControllerOptions } from "./options.js";
+import type {
+  OverflowMode,
+  Placement,
+  ToastControllerOptions,
+  ToastSize,
+} from "./options.js";
 import type { ToastTexts } from "./texts.js";
 import type { ToastAppearance, ToastView } from "./view.js";
 import type {
@@ -26,10 +31,47 @@ import type {
   PromiseMessages,
 } from "./types.js";
 
-const ENTER_EXIT_TRANSITION = "transform 700ms ease-in-out";
+// Entering and leaving are not mirror images here, because they do not cover the same
+// ground. A toast arrives by rising its own height and fading in — a short, calm move that
+// works the same whether the toasts are stacked or listed. It leaves by travelling clear
+// off the screen, which takes both longer and a direction: swipe-to-dismiss drags a card
+// sideways and the exit has to carry on from where the finger let go (see the element's
+// onPointerDown), so the way out stays horizontal.
+// These are written inline, and an inline transition replaces the stylesheet's outright —
+// so they have to name every property that was being transitioned there, or the ones they
+// leave out stop animating for that toast from then on. translate/scale carry the stacked
+// offset (see the container stylesheet); dropping them is what made settled cards jump
+// while a new one slid in.
+const ENTER_MS = 400;
+// Shared with the FLIP shuffle in animateMovement: when a toast arrives, the ones already
+// on screen move aside at the same moment, and any difference in curve or duration reads
+// as them setting off at a different time.
+const ENTER_EASING = "ease";
+const ENTER_TRANSITION =
+  `transform ${ENTER_MS}ms ${ENTER_EASING}, opacity ${ENTER_MS}ms ${ENTER_EASING},` +
+  ` translate ${ENTER_MS}ms ${ENTER_EASING}, scale ${ENTER_MS}ms ${ENTER_EASING}`;
+const EXIT_TRANSITION =
+  "transform 700ms ease-in-out, translate 400ms ease, scale 400ms ease";
+const EXIT_MS = 700;
 const OFFSCREEN_DISTANCE = "120vw";
 const OFFSCREEN_DISTANCE_V = "120vh";
-const EXIT_MS = 700;
+
+// Re-stacking that accompanies an arriving toast travels with it, so it borrows the
+// entrance's timing and the two read as one movement. Expanding the stack on hover or a tap
+// is a direct answer to the user's own pointer and wants to be quicker still.
+const STACK_SHUFFLE_MS = 400;
+const STACK_TOGGLE_MS = 200;
+// The one source of truth for the space between cards. The stylesheet reads it back as
+// --toast-gap rather than repeating the number: the flat list's `gap` and the offsets an
+// expanding stack animates to have to agree exactly, or the two layouts land in different
+// places.
+const TOAST_GAP_PX = 8;
+// How much of each card behind the front one stays visible, and how much smaller it gets.
+// Past STACK_MAX_DEPTH the cards are fully covered anyway, so they stop receding — letting
+// them go on would march the pile across the screen.
+const STACK_PEEK_PX = 10;
+const STACK_SCALE_STEP = 0.05;
+const STACK_MAX_DEPTH = 3;
 
 // Cap-eviction exit: a quick fade in place (see remove()'s "fade" mode).
 const FADE_TRANSITION = "opacity 500ms ease";
@@ -76,30 +118,40 @@ interface Toast<C> {
 export function createToastController<C>(
   options: ToastControllerOptions<C>,
 ): ToastController<C> {
-  const { adapter, theme, getText, autoTitles, maxVisible } = options;
+  // The adapter is fixed for the controller's life — it is bound to this container below,
+  // and rebinding it would mean throwing the rendered stack away. Everything else is read
+  // through `opts` at the point of use rather than captured here, so `configure()` can
+  // replace it and the next toast simply reads what is current. Nothing on screen is
+  // disturbed by that; container-level settings are re-applied in applyContainerOptions.
+  const { adapter } = options;
+  let opts: ToastControllerOptions<C> = options;
+
   // Icons are on by default (they were always shown before this option existed).
-  const autoIcons = options.autoIcons ?? true;
-  const placement = options.placement ?? "bottom-end";
-  const overflow = options.overflow ?? "evict";
-  const dismissOnSwipe = options.dismissOnSwipe ?? true;
-  const pauseOnHidden = options.pauseOnHidden ?? true;
-  const liveRegion = options.liveRegion ?? false;
-  const appearanceOption = options.appearance ?? "light";
-  const size = options.size ?? "medium";
+  const autoIcons = (): boolean | ToastType[] => opts.autoIcons ?? true;
+  const placement = (): Placement => opts.placement ?? "bottom-end";
+  const overflow = (): OverflowMode => opts.overflow ?? "evict";
+  const dismissOnSwipe = (): boolean => opts.dismissOnSwipe ?? true;
+  const pauseOnHidden = (): boolean => opts.pauseOnHidden ?? true;
+  const liveRegion = (): boolean => opts.liveRegion ?? false;
+  const size = (): ToastSize => opts.size ?? "medium";
+  const autoTitles = (): boolean | ToastType[] | undefined => opts.autoTitles;
+  const maxVisible = (): number | undefined => opts.maxVisible;
+  const stacked = (): boolean => opts.stacked ?? false;
 
   // Resolve the appearance for a type: a single value applies to all; a
   // per-type map falls back to "light" for anything unlisted.
   function appearanceFor(type: ToastType): ToastAppearance {
-    return typeof appearanceOption === "string"
-      ? appearanceOption
-      : (appearanceOption[type] ?? "light");
+    const option = opts.appearance ?? "light";
+    return typeof option === "string" ? option : (option[type] ?? "light");
   }
 
   injectContainerStyles();
   const tag = ensureElementRegistered();
 
+  // A caller's resolver still wins outright. Without one — or for a key it declines — the
+  // bundled table for <html lang> answers, and English behind that.
   function text(key: keyof ToastTexts): string {
-    return getText?.(key) ?? defaultToastTexts[key];
+    return opts.getText?.(key) ?? bundledToastText(key);
   }
 
   const reducedMotionQuery =
@@ -113,53 +165,97 @@ export function createToastController<C>(
 
   const container = document.createElement("div");
   container.className = "toasts-container";
-  applyPlacement(container, placement);
-
-  // Merge over the defaults and expose every entry as a CSS custom property on
-  // the container. Variables inherit down to each host and pierce its shadow
-  // root, so the theme is scoped per controller even though the element's
-  // stylesheet lives in shadow DOM.
-  const mergedTheme = { ...defaultToastTheme, ...theme };
-  for (const [key, value] of Object.entries(mergedTheme)) {
-    if (value != null) container.style.setProperty(toCssVariable(key), value);
-  }
-
-  // Card scale: the shadow `:host` multiplies its width/padding/font-size/gap by this,
-  // inherited through the shadow boundary like the theme tokens above.
-  container.style.setProperty("--toast-scale", NOTIF_SCALES[size]);
-
-  document.body.appendChild(container);
-
-  // Resolve the swipe-dismiss direction (physical, RTL-aware) once the
-  // container is in the DOM. The custom element reads container.dataset.swipe.
-  (function computeSwipeData() {
-    const { horizontal } = splitPlacement(placement);
-    if (!dismissOnSwipe || horizontal === "center") {
-      container.dataset.swipe = "off";
-      return;
-    }
-    const rtl = getComputedStyle(container).direction === "rtl";
-    const toRight = (horizontal === "end") !== rtl;
-    container.dataset.swipe = toRight ? "right" : "left";
-  })();
 
   // Persistent aria-live regions (opt-in). More reliable than announcing via a
   // freshly-inserted role="alert" host.
   let politeRegion: HTMLElement | null = null;
   let assertiveRegion: HTMLElement | null = null;
-  if (liveRegion) {
-    politeRegion = document.createElement("div");
-    politeRegion.className = "toasts-liveregion";
-    politeRegion.setAttribute("aria-live", "polite");
-    politeRegion.setAttribute("role", "status");
 
-    assertiveRegion = document.createElement("div");
-    assertiveRegion.className = "toasts-liveregion";
-    assertiveRegion.setAttribute("aria-live", "assertive");
-    assertiveRegion.setAttribute("role", "alert");
-
-    container.append(politeRegion, assertiveRegion);
+  function hiddenRegion(live: string, role: string): HTMLElement {
+    const el = document.createElement("div");
+    el.className = "toasts-liveregion";
+    el.setAttribute("aria-live", live);
+    el.setAttribute("role", role);
+    return el;
   }
+
+  // Everything that lives on the container rather than on a toast. Split out (and called
+  // again by configure) because these are exactly the settings that were previously baked
+  // in at construction: the theme is re-merged over the defaults every time, so a token
+  // that is dropped from the theme goes back to its default rather than lingering.
+  function applyContainerOptions(): void {
+    applyPlacement(container, placement());
+
+    // Merge over the defaults and expose every entry as a CSS custom property on
+    // the container. Variables inherit down to each host and pierce its shadow
+    // root, so the theme is scoped per controller even though the element's
+    // stylesheet lives in shadow DOM.
+    const mergedTheme = { ...defaultToastTheme, ...opts.theme };
+    for (const [key, value] of Object.entries(mergedTheme)) {
+      if (value != null) container.style.setProperty(toCssVariable(key), value);
+    }
+
+    // Card scale: the shadow `:host` multiplies its width/padding/font-size/gap by this,
+    // inherited through the shadow boundary like the theme tokens above.
+    container.style.setProperty("--toast-scale", NOTIF_SCALES[size()]);
+
+    // The stylesheet's `gap` reads this, so the flat list and the stack's expanded offsets
+    // are driven by the same number instead of two that have to be kept in step by hand.
+    container.style.setProperty("--toast-gap", `${TOAST_GAP_PX}px`);
+
+    // Swipe-dismiss direction (physical, RTL-aware). Only meaningful once the container
+    // is in the DOM, since it reads the resolved writing direction; the custom element
+    // reads container.dataset.swipe.
+    const { horizontal } = splitPlacement(placement());
+    if (!dismissOnSwipe() || horizontal === "center") {
+      container.dataset.swipe = "off";
+    } else {
+      const rtl = getComputedStyle(container).direction === "rtl";
+      container.dataset.swipe = (horizontal === "end") !== rtl ? "right" : "left";
+    }
+
+    // Stacked layout, and which way the cards behind the newest peek out: away from the
+    // anchored edge, so the pile always grows into the screen rather than off it.
+    if (stacked()) {
+      container.dataset.stacked = "on";
+      const { vertical, horizontal } = splitPlacement(placement());
+      container.style.setProperty("--stack-dir", vertical === "top" ? "1" : "-1");
+      // applyPlacement just set alignItems inline for a flex column, where it means the
+      // INLINE axis. Under grid the same property means the BLOCK axis, so that value
+      // would push the cards to the bottom of the box — invisible while the box is one
+      // card tall, glaring once expanding makes it tall. Overwritten here rather than in
+      // the stylesheet, because an inline declaration is what has to be beaten.
+      container.style.alignItems = vertical === "top" ? "start" : "end";
+      container.style.justifyItems = horizontal;
+      // Shrink toward the anchored edge, not the middle: that edge is where the cards line
+      // up, so keeping it fixed is both what the pile should look like and what makes the
+      // peek arithmetic in syncStackIndices tractable.
+      container.style.setProperty(
+        "--stack-origin",
+        vertical === "top" ? "top" : "bottom",
+      );
+    } else {
+      delete container.dataset.stacked;
+      delete container.dataset.expanded;
+      container.style.removeProperty("--stack-dir");
+      // alignItems belongs to applyPlacement again; justifyItems is meaningless for flex.
+      container.style.removeProperty("justify-items");
+    }
+
+    if (liveRegion() && !politeRegion) {
+      politeRegion = hiddenRegion("polite", "status");
+      assertiveRegion = hiddenRegion("assertive", "alert");
+      container.append(politeRegion, assertiveRegion);
+    } else if (!liveRegion() && politeRegion) {
+      politeRegion.remove();
+      assertiveRegion?.remove();
+      politeRegion = null;
+      assertiveRegion = null;
+    }
+  }
+
+  document.body.appendChild(container);
+  applyContainerOptions();
 
   // Bind the chosen adapter to this controller's container + element tag.
   const renderer = adapter({ container, tag });
@@ -219,6 +315,7 @@ export function createToastController<C>(
     );
     if (host) {
       pause(Number(host.dataset.id));
+      setExpanded(true);
     }
   });
 
@@ -230,6 +327,110 @@ export function createToastController<C>(
       resume(Number(host.dataset.id));
     }
   });
+
+  // Collapsing is driven from the document, not from the cards' own mouseout, for two
+  // reasons that pull in opposite directions. Expanding moves the cards, and one sliding
+  // out from under a stationary pointer fires mouseout exactly as leaving does — acting on
+  // that made the stack bounce open and shut. But asking only where the pointer was when
+  // it left a card misses the other exit: through a gap, or through the part of the
+  // container no card covers. From there the container's pointer-events: none means no
+  // further event ever arrives, and the stack stays open. Watching the pointer itself
+  // answers both — it is the position that matters, not what was left behind.
+  //
+  // Mouse only. Touch expands by tapping and collapses by tapping elsewhere; a finger
+  // wandering off during a swipe-to-dismiss should not fold the stack mid-gesture.
+  const onPointerMoveOutside = (event: PointerEvent): void => {
+    if (event.pointerType !== "mouse") {
+      return;
+    }
+    if (pointerOverStack(event)) {
+      window.clearTimeout(collapseTimer);
+    } else {
+      collapseSoon();
+    }
+  };
+
+  function pointerOverStack(event: MouseEvent): boolean {
+    const rect = container.getBoundingClientRect();
+    return (
+      event.clientX >= rect.left &&
+      event.clientX <= rect.right &&
+      event.clientY >= rect.top &&
+      event.clientY <= rect.bottom
+    );
+  }
+
+  // --- stacked layout: expanding and collapsing ----------------------------
+  //
+  // Collapsing is deferred by a beat rather than done on the spot, because the gaps
+  // between the cards belong to no toast: moving the pointer from one card to the next
+  // leaves the stack for an instant and would otherwise make it snap shut and open again.
+  // Sonner bridges those gaps with a generated ::after; that is not available here, since
+  // a toast host owns a shadow root and generated content on a shadow host never renders.
+  // A cancelled timeout does the same job without touching the layout.
+  const COLLAPSE_DELAY_MS = 120;
+  let collapseTimer: ReturnType<typeof setTimeout> | undefined;
+
+  function setExpanded(expanded: boolean): void {
+    window.clearTimeout(collapseTimer);
+    if (!stacked()) {
+      return;
+    }
+    container.style.setProperty("--stack-duration", `${STACK_TOGGLE_MS}ms`);
+    if (expanded) {
+      container.dataset.expanded = "on";
+      // Only while it is open — an always-on pointermove listener for a stack nobody is
+      // looking at would be a needless tax on every mouse move in the page.
+      document.addEventListener("pointermove", onPointerMoveOutside);
+    } else {
+      delete container.dataset.expanded;
+      document.removeEventListener("pointermove", onPointerMoveOutside);
+    }
+  }
+
+  function collapseSoon(): void {
+    window.clearTimeout(collapseTimer);
+    collapseTimer = window.setTimeout(
+      () => setExpanded(false),
+      COLLAPSE_DELAY_MS,
+    ) as unknown as ReturnType<typeof setTimeout>;
+  }
+
+  // Touch has no hover, so a tap on a card body opens the stack. That gesture is free:
+  // the click handler above ignores anything that is not an action button, the close
+  // button reports through its own event out of the shadow root, and a swipe never
+  // starts on a button and is discarded below its threshold.
+  //
+  // A second tap deliberately does NOT collapse: by then the finger is usually on its way
+  // to an action button, and folding the stack under it would be maddening. Tapping
+  // outside is what closes it.
+  container.addEventListener("click", (event) => {
+    const host = (event.target as HTMLElement | null)?.closest<HTMLElement>(
+      "[data-id]",
+    );
+    if (host) {
+      setExpanded(true);
+    }
+  });
+
+  // Keyboard users reach the cards by tabbing; the stack has to be open for that to be
+  // any use. focusout carries the element focus moves *to*, so leaving for something
+  // outside the stack collapses it while moving between cards does not.
+  container.addEventListener("focusin", () => setExpanded(true));
+  container.addEventListener("focusout", (event) => {
+    const next = event.relatedTarget as Node | null;
+    if (!next || !container.contains(next)) {
+      collapseSoon();
+    }
+  });
+
+  const onPointerDownOutside = (event: PointerEvent): void => {
+    const target = event.target as Node | null;
+    if (!target || !container.contains(target)) {
+      setExpanded(false);
+    }
+  };
+  document.addEventListener("pointerdown", onPointerDownOutside);
 
   // Escape dismisses the most recent still-present, dismissible toast.
   function onKeyDown(event: KeyboardEvent) {
@@ -254,6 +455,9 @@ export function createToastController<C>(
   // Freeze timers + the CSS ring while the tab is backgrounded, so a
   // toast doesn't silently expire off-screen.
   function onVisibilityChange() {
+    if (!pauseOnHidden()) {
+      return;
+    }
     if (document.hidden) {
       pauseAll();
       container.style.setProperty("--toast-play-state", "paused");
@@ -262,12 +466,22 @@ export function createToastController<C>(
       resumeAll();
     }
   }
-  if (pauseOnHidden) {
-    document.addEventListener("visibilitychange", onVisibilityChange);
+  // Always listened for; the handler checks the current setting, so toggling
+  // `pauseOnHidden` through configure() takes effect without re-binding anything.
+  document.addEventListener("visibilitychange", onVisibilityChange);
+
+  // Where a toast starts: one card-height outside its resting place, on the side the stack
+  // is anchored to, so it rises into the corner it belongs to. No writing direction to
+  // consult — the move is purely vertical.
+  function enterTransform(): string {
+    const { vertical } = splitPlacement(placement());
+    return `translateY(${vertical === "top" ? "-" : ""}100%)`;
   }
 
-  function offscreenTransform(): string {
-    const { vertical, horizontal } = splitPlacement(placement);
+  // Where a toast goes: clear of the viewport, toward the nearest edge, which for a corner
+  // placement is the horizontal one a swipe would have thrown it at.
+  function exitTransform(): string {
+    const { vertical, horizontal } = splitPlacement(placement());
     if (horizontal === "center") {
       return `translateY(${vertical === "top" ? "-" : ""}${OFFSCREEN_DISTANCE_V})`;
     }
@@ -351,6 +565,14 @@ export function createToastController<C>(
       return;
     }
 
+    // A stack never moves anything by layout — collapsed or expanded, every card sits in
+    // the same grid cell and only its transform differs. So the only difference a rect can
+    // show is that transform, which getBoundingClientRect includes: FLIP would animate a
+    // movement the stylesheet is already animating, at its own duration, on top of it.
+    if (stacked()) {
+      return;
+    }
+
     requestAnimationFrame(() => {
       container
         .querySelectorAll<HTMLElement>("[data-id]")
@@ -382,9 +604,13 @@ export function createToastController<C>(
                 { transform: `translateY(${deltaY}px)` },
                 { transform: "translateY(0)" },
               ],
+              // Same duration and curve as the arriving toast's own slide. The two happen
+              // at once and are read as one movement, so a different easing here — the
+              // former ease-in-out, which also brakes at the start — made the settled
+              // toasts look like they set off late.
               {
-                duration: 400,
-                easing: "ease-in-out",
+                duration: ENTER_MS,
+                easing: ENTER_EASING,
               },
             );
           }
@@ -400,7 +626,7 @@ export function createToastController<C>(
     // caller omitted the title AND the controller policy opts this type in.
     const defaultTitleShown =
       toast.title === undefined &&
-      policyEnabled(autoTitles, toast.type);
+      policyEnabled(autoTitles(), toast.type);
 
     // Resolve the heading: `false` -> none; omitted -> policy default or none;
     // otherwise the caller's value.
@@ -434,7 +660,7 @@ export function createToastController<C>(
     } else if (
       toast.type === "loading" ||
       (toast.icon === undefined &&
-        policyEnabled(autoIcons, toast.type))
+        policyEnabled(autoIcons(), toast.type))
     ) {
       // The spinner IS the loading affordance, so it ignores the icon policy.
       iconMode = toast.icon === false ? "none" : "default";
@@ -445,7 +671,7 @@ export function createToastController<C>(
     return {
       id: toast.id,
       type: toast.type,
-      role: liveRegion ? "none" : roleFor(toast.type),
+      role: liveRegion() ? "none" : roleFor(toast.type),
       duration: toast.duration,
       dismissLabel: text("dismiss"),
       iconMode,
@@ -463,16 +689,71 @@ export function createToastController<C>(
   function update(previous?: Map<number, DOMRect>) {
     // Queued toasts exist in state but aren't rendered yet.
     renderer.render(toasts.filter((item) => !item.queued).map(toView));
+    syncStackIndices();
 
     if (previous) {
       animateMovement(previous);
     }
   }
 
+  // Both stacked states are transforms off a single shared grid cell: the collapsed one
+  // from a card's depth in the pile, the expanded one from the real heights of the cards
+  // in front of it. Laying the expanded state out for real (a flex column) and only the
+  // collapsed one by transform would put a layout change between the two — and layout
+  // changes do not animate, so expanding would snap open. Measuring costs a reflow here,
+  // which playEnter is about to force anyway.
+  //
+  // The newest host is the last child, so both the depth and the running offset count back
+  // from the end.
+  function syncStackIndices(): void {
+    if (!stacked()) {
+      return;
+    }
+    // A toast is arriving or leaving, so the re-stack travels alongside its slide.
+    container.style.setProperty("--stack-duration", `${STACK_SHUFFLE_MS}ms`);
+
+    const hosts = Array.from(
+      container.querySelectorAll<HTMLElement>(':scope > [data-id]'),
+    );
+    const newest = hosts.length - 1;
+    const frontHeight = hosts[newest]?.offsetHeight ?? 0;
+    let offset = 0;
+
+    for (let position = newest; position >= 0; position--) {
+      const host = hosts[position];
+      const depth = Math.min(newest - position, STACK_MAX_DEPTH);
+      const scale = 1 - depth * STACK_SCALE_STEP;
+
+      // The collapsed offset is derived, not a fixed step per depth: what should be
+      // constant is how far a card's trailing edge clears the front card's — 14px, no
+      // matter how tall the card itself is. A fixed step assumes every toast is the same
+      // height, and a short one in front (a loading toast, say) then lets the taller card
+      // behind it show far more than a sliver. Height times scale is the visual extent,
+      // since transform-origin sits on the anchored edge.
+      const peek = frontHeight + depth * STACK_PEEK_PX - host.offsetHeight * scale;
+
+      host.style.setProperty("--stack-index", String(newest - position));
+      host.style.setProperty("--stack-scale", String(scale));
+      host.style.setProperty("--stack-collapsed", `${Math.max(0, peek)}px`);
+      host.style.setProperty("--stack-offset", `${offset}px`);
+      offset += host.offsetHeight + TOAST_GAP_PX;
+    }
+
+    // The container carries its own height, because its children all share one cell and it
+    // would otherwise stay one card tall — the expanded pile would then hang outside the
+    // area the pointer has to stay in to keep it open.
+    const collapsed = hosts[newest]?.offsetHeight ?? 0;
+    container.style.setProperty("--stack-collapsed-height", `${collapsed}px`);
+    container.style.setProperty(
+      "--stack-expanded-height",
+      `${Math.max(collapsed, offset - TOAST_GAP_PX)}px`,
+    );
+  }
+
   // Compose the announcement from what's actually on screen (works for any
   // content type, since we read the rendered light-DOM text).
   function announce(toast: Toast<C>) {
-    if (!liveRegion) {
+    if (!liveRegion()) {
       return;
     }
     const host = container.querySelector<HTMLElement>(
@@ -505,16 +786,25 @@ export function createToastController<C>(
     );
 
     if (element && !prefersReducedMotion()) {
-      element.style.transform = offscreenTransform();
+      element.style.transform = enterTransform();
+      element.style.opacity = "0";
 
-      // Force the browser to commit the off-screen start position before the
-      // transition is enabled. Without this reflow the two style writes collapse
-      // into a single computed change and the toast pops in instead of
-      // sliding.
+      // Force the browser to commit the start position before the transition is
+      // enabled. Without this reflow the two style writes collapse into a single
+      // computed change and the toast pops in instead of sliding.
       void element.offsetWidth;
 
-      element.style.transition = ENTER_EXIT_TRANSITION;
+      element.style.transition = ENTER_TRANSITION;
       element.style.transform = "";
+      element.style.opacity = "";
+
+      // Hand the toast back to the stylesheet once it has arrived. Its inline transition
+      // is fixed at the entrance timing, while the stylesheet's is driven by
+      // --stack-duration and switches between the shuffle and the quicker hover expand —
+      // which it cannot do as long as an inline declaration outranks it.
+      window.setTimeout(() => {
+        element.style.transition = "";
+      }, ENTER_MS);
     }
   }
 
@@ -584,10 +874,10 @@ export function createToastController<C>(
     // The at-rest translateX(0) has already been painted in previous frames, so
     // enabling the transition and then flipping the transform in the next frame
     // animates cleanly.
-    element.style.transition = ENTER_EXIT_TRANSITION;
+    element.style.transition = EXIT_TRANSITION;
 
     requestAnimationFrame(() => {
-      element.style.transform = offscreenTransform();
+      element.style.transform = exitTransform();
     });
 
     window.setTimeout(drop, EXIT_MS);
@@ -600,14 +890,15 @@ export function createToastController<C>(
 
   // Evict mode: trim the oldest visible toasts past the cap (fade exit).
   function enforceCap() {
-    if (!maxVisible || maxVisible <= 0) {
+    const cap = maxVisible();
+    if (!cap || cap <= 0) {
       return;
     }
 
     const active = toasts.filter(
       (item) => !item.removing && !item.queued,
     );
-    const excess = active.length - maxVisible;
+    const excess = active.length - cap;
 
     // Oldest first (array order == insertion order). Cap-evictions fade rather
     // than slide — a displaced toast quietly yields its space.
@@ -617,16 +908,20 @@ export function createToastController<C>(
   }
 
   // Queue mode: when a slot frees up, promote the oldest waiting toast.
-  function promoteQueued() {
-    if (overflow !== "queue" || !maxVisible || maxVisible <= 0) {
-      return;
+  // Promotes at most one queued toast, and says whether it did. One is the right unit for
+  // the usual caller — a toast left, so a slot opened — while configure(), which can free
+  // several slots at once by raising the cap, loops until this comes back false.
+  function promoteQueued(): boolean {
+    const cap = maxVisible();
+    if (overflow() !== "queue" || !cap || cap <= 0) {
+      return false;
     }
-    if (visibleCount() >= maxVisible) {
-      return;
+    if (visibleCount() >= cap) {
+      return false;
     }
     const next = toasts.find((item) => item.queued);
     if (!next) {
-      return;
+      return false;
     }
 
     const previous = getPositions();
@@ -635,6 +930,7 @@ export function createToastController<C>(
     playEnter(next);
     startTimer(next);
     announce(next);
+    return true;
   }
 
   function toOptions(input: ToastInput<C>): ToastOptions<C> {
@@ -785,10 +1081,10 @@ export function createToastController<C>(
 
     // Queue mode: hold this one off-screen if we're already at the cap.
     if (
-      overflow === "queue" &&
-      maxVisible &&
-      maxVisible > 0 &&
-      visibleCount() > maxVisible
+      overflow() === "queue" &&
+      maxVisible() &&
+      maxVisible()! > 0 &&
+      visibleCount() > maxVisible()!
     ) {
       toast.queued = true;
       return handleFor(toast.id);
@@ -800,7 +1096,7 @@ export function createToastController<C>(
     announce(toast);
 
     // Evict mode handles the cap here; queue mode already gated above.
-    if (overflow === "evict") {
+    if (overflow() === "evict") {
       enforceCap();
     }
 
@@ -851,6 +1147,23 @@ export function createToastController<C>(
 
       return Object.assign(handle, { result });
     },
+    configure(next: Omit<ToastControllerOptions<C>, "adapter">) {
+      // A wholesale replacement, not a merge: a field left out goes back to its default,
+      // so the object handed in is always the complete truth about this controller. That
+      // is what lets a caller — or a React provider pushing its current config — hand it
+      // over without having to work out what changed.
+      opts = { ...next, adapter } as ToastControllerOptions<C>;
+      applyContainerOptions();
+      // The per-toast settings (icons, titles, appearance, texts) are read at render
+      // time, so re-rendering is all it takes for the stack already on screen to pick
+      // them up. A tightened `maxVisible` is enforced the way it is on arrival.
+      enforceCap();
+      while (promoteQueued()) {
+        // Raising the cap can free several slots at once.
+      }
+      update();
+    },
+
     clear() {
       for (const toast of toasts) {
         if (toast.timer !== null) {
@@ -876,10 +1189,11 @@ export function createToastController<C>(
       }
       toasts.length = 0;
 
+      window.clearTimeout(collapseTimer);
       document.removeEventListener("keydown", onKeyDown);
-      if (pauseOnHidden) {
-        document.removeEventListener("visibilitychange", onVisibilityChange);
-      }
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      document.removeEventListener("pointerdown", onPointerDownOutside);
+      document.removeEventListener("pointermove", onPointerMoveOutside);
 
       renderer.destroy?.();
       container.remove();

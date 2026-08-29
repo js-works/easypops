@@ -3,7 +3,7 @@
 // -------------------------------------------------------------------
 
 /** Values treated as `false` by `boolean()`, compared case-insensitively. */
-const FALSY_FORM_VALUES = new Set(["", "0", "false", "off", "no"]);
+const falsyFormValues = new Set(["", "0", "false", "off", "no"]);
 
 /** True if `value` is a File. Guards against `File` being undefined off the DOM. */
 function isFile(value: unknown): value is File {
@@ -64,7 +64,7 @@ export class FormDialogData extends FormData {
     const value = this.get(key);
     if (value == null) return false;
     if (typeof value !== "string") return true; // a submitted File counts as present
-    return !FALSY_FORM_VALUES.has(value.trim().toLowerCase());
+    return !falsyFormValues.has(value.trim().toLowerCase());
   }
 
   /** First value for `key` as an integer; `null` if absent, blank, or not a whole number. */

@@ -4,8 +4,8 @@
 //
 // NOTE (interim): tokens are currently applied via CSS custom properties set on the
 // stack container (see toasts/controller.ts + the shadow styles in toasts/element.ts).
-// That mechanism is slated to change — values baked into the generated stylesheet, no
-// js-gossip custom properties — but the public shape here (ToastTheme / defaultToastTheme
+// That mechanism is slated to change — values baked into the generated stylesheet rather
+// than handed over at runtime — but the public shape here (ToastTheme / defaultToastTheme
 // / createToastTheme) is intended to stay.
 // -------------------------------------------------------------------
 
@@ -44,7 +44,11 @@ export const defaultToastTheme: ToastTheme = {
   background: "#ffffff",
   text: "#111827",
   radius: "5px",
-  shadow: "0 10px 25px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.05)",
+  // Kept tighter than the card gap on purpose. Toasts in a flat list sit TOAST_GAP_PX
+  // apart, so a shadow reaching further than that lands on the neighbour below and the
+  // stack reads as one shaded column instead of separate cards. Offset plus blur here
+  // stay inside that gap; the slightly higher alpha keeps it from looking washed out.
+  shadow: "0 4px 10px rgba(0, 0, 0, 0.10), 0 1px 2px rgba(0, 0, 0, 0.06)",
   infoAccent: "#2563eb",
   successAccent: "#16a34a",
   warnAccent: "#d97706",

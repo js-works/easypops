@@ -2,10 +2,10 @@
 // # Icons
 // -------------------------------------------------------------------
 
-import { parseSvg } from "../internal/dom.js";
-import { infoIconSvg, successIconSvg } from "../internal/icons.js";
-import type { Renderable } from "./content.js";
-import type { DialogType } from "./types.js";
+import { parseSvg } from "../../internal/dom.js";
+import { infoIconSvg, successIconSvg } from "../../internal/icons.js";
+import type { Renderable } from "../contract/content.js";
+import type { DialogType } from "../contract/types.js";
 
 export const closeIconSvg = `
   <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 16 16">
@@ -35,11 +35,11 @@ export const alertIconSvg = `
   </svg>
 `;
 
-// Exclamation-circle-fill, used for the form dialog's reject message. Defined here (not
+// Exclamation-circle-fill, used for the form dialog's note box. Defined here (not
 // in internal/icons.js) so the toast error icon is unaffected; tinted reddish via CSS
-// rather than fill="currentColor" inheritance, since the reject message's own text stays
+// rather than fill="currentColor" inheritance, since the note's own text stays
 // the normal text color.
-export const rejectIconSvg = `
+export const noteIconSvg = `
   <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 16 16">
     <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M8 4a.905.905 0 0 0-.9.995l.35 3.507a.552.552 0 0 0 1.1 0l.35-3.507A.905.905 0 0 0 8 4m.002 6a1 1 0 1 0 0 2 1 1 0 0 0 0-2"/>
   </svg>
@@ -62,6 +62,7 @@ export function defaultDialogIcon(dialogType: DialogType): Renderable<any> {
     case "form":
     case "formCritical":
     case "drawer":
+    case "drawerCritical":
       return null;
   }
 }

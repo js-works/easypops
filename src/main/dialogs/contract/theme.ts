@@ -5,7 +5,7 @@
 // NOTE (interim): tokens are currently applied via `--dialog-*` CSS custom properties
 // set on the dialog element (see dialogs/controller.ts + dialogs/styles.ts). That
 // mechanism is slated to change — values will be baked straight into the generated
-// stylesheet so the core defines no js-gossip custom properties — but the public shape
+// stylesheet so the core defines no custom properties of its own — but the public shape
 // here (DialogTheme / defaultDialogTheme / createDialogTheme) is intended to stay.
 // -------------------------------------------------------------------
 

@@ -5,6 +5,7 @@
 // the DOM — keeping the library SSR-safe until a controller is created in a browser.
 // -------------------------------------------------------------------
 
+import { css } from "../internal/css.js";
 import { registerFirstFreeTag } from "../internal/custom-element.js";
 import { toastIcons } from "./icons.js";
 import type { ToastType } from "./types.js";
@@ -13,7 +14,7 @@ import type { ToastType } from "./types.js";
 // bubbling) on the container, which maps event.target (retargeted to the host) to an id.
 export const DISMISS_EVENT = "internal-toast:dismiss";
 
-const SHADOW_STYLES = `
+const SHADOW_STYLES = css`
 :host {
   position: relative;
   box-sizing: border-box;
@@ -29,10 +30,12 @@ const SHADOW_STYLES = `
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: calc(1em * var(--toast-scale, 1));
   line-height: 1.5;
+  /* Fallback for a card rendered before the controller sets --shadow; kept identical to
+     defaultToastTheme.shadow, which carries the reasoning for the values. */
   box-shadow: var(
     --shadow,
-    0 10px 25px rgba(0, 0, 0, 0.08),
-    0 2px 6px rgba(0, 0, 0, 0.05)
+    0 4px 10px rgba(0, 0, 0, 0.1),
+    0 1px 2px rgba(0, 0, 0, 0.06)
   );
   overflow: hidden;
   pointer-events: auto;

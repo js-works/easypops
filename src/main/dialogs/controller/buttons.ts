@@ -2,10 +2,10 @@
 // # Button configs
 // -------------------------------------------------------------------
 
-import type { ActionButtonType, DialogButtonLabels } from "./types.js";
-import type { TextKey } from "./texts.js";
+import type { ActionButtonType, ButtonRole } from "../contract/types.js";
+import type { TextKey } from "../contract/texts.js";
 
-export type ButtonRole = keyof DialogButtonLabels;
+export type { ButtonRole } from "../contract/types.js";
 
 export interface ButtonConfig {
   /** Result identity. `cancel` resolves the canceled branch; the others map to actions. */
@@ -47,6 +47,6 @@ export const okBtnDanger = btn(symbolOk, "ok", "danger", "buttonOk");
 export const confirmBtn = btn(symbolConfirm, "confirm", "primary", "buttonOk");
 export const confirmBtnDanger = btn(symbolConfirm, "confirm", "danger", "buttonOk");
 export const cancelBtn = btn(symbolCancel, "cancel", "secondary", "buttonCancel");
-export const yesBtn = btn(symbolConfirm, "yes", "primary", "buttonYes");
-export const yesBtnDanger = btn(symbolConfirm, "yes", "danger", "buttonYes");
-export const noBtn = btn(symbolDecline, "no", "secondary", "buttonNo");
+export const yesBtn = btn(symbolConfirm, "confirm", "primary", "buttonYes");
+export const yesBtnDanger = btn(symbolConfirm, "confirm", "danger", "buttonYes");
+export const noBtn = btn(symbolDecline, "decline", "secondary", "buttonNo");

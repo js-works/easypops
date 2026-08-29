@@ -268,3 +268,20 @@ pre#log {
   background: #d03b3b;
   clip-path: polygon(100% 0, 100% 100%, 0 0);
 }
+
+/* Cross-link between the two demo pages (see index.html / react.html). */
+.demo-nav {
+  display: flex;
+  gap: 1rem;
+  align-items: baseline;
+  margin-block-end: 1.5rem;
+  font-size: 0.9rem;
+}
+
+.demo-nav strong {
+  color: var(--page-fg);
+}
+
+.demo-nav a {
+  color: var(--ui-color-primary-500);
+}

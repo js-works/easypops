@@ -1,0 +1,33 @@
+[
+  {
+    "name": "Core only (dialogs + toasts)",
+    "path": "dist/index.js"
+  },
+  {
+    "name": "Dialogs only",
+    "path": "scripts/size/app-dialogs.js"
+  },
+  {
+    "name": "Toasts only",
+    "path": "scripts/size/app-toasts.js"
+  },
+  {
+    "name": "Core + DOM bindings",
+    "path": "scripts/size/app-dom.js"
+  },
+  {
+    "name": "Core + lit bindings",
+    "path": "scripts/size/app-lit.js",
+    "ignore": ["lit-html"]
+  },
+  {
+    "name": "Core + React bindings",
+    "path": "scripts/size/app-react.js",
+    "ignore": ["react", "react-dom"]
+  },
+  {
+    "name": "Core + picolingo i18n",
+    "path": "scripts/size/app-picolingo.js",
+    "ignore": ["picolingo"]
+  }
+]

@@ -14,5 +14,13 @@ export default defineConfig({
     // Being outside `root` is why emptyOutDir has to be spelled out.
     outDir: '../../dist-demo',
     emptyOutDir: true,
+    // Three pages: the lit demo (index), the React form demo, and the React i18n one.
+    rollupOptions: {
+      input: {
+        index: 'src/demo/index.html',
+        react: 'src/demo/react.html',
+        'react-i18n': 'src/demo/react-i18n.html',
+      },
+    },
   },
 });

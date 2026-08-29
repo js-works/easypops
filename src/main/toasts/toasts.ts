@@ -10,20 +10,10 @@
 // original behaviour.
 
 export { createToastController } from "./controller.js";
-export {
-  createReactAdapter,
-  litToastAdapter,
-  vanillaAdapter,
-} from "./adapters.js";
 export { createToastTheme, defaultToastTheme } from "./theme.js";
 export { defaultToastTexts } from "./texts.js";
 export type { ToastTheme } from "./theme.js";
 
-export type {
-  LitContent,
-  ReactRuntime,
-  VanillaContent,
-} from "./adapters.js";
 export type { ToastTextResolver, ToastTexts } from "./texts.js";
 export type {
   ToastSize,

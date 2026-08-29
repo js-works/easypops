@@ -29,11 +29,20 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          # No `cache: npm` on purpose: package-lock.json is gitignored, so there's no
-          # lockfile for the cache key to hash (and no `npm ci` either — see below).
+          # `cache: npm` is not enabled yet. It only became possible once
+          # package-lock.json started being committed — see the install step below.
 
-      # `npm install`, not `npm ci`, for the same reason: this repo doesn't commit a
-      # lockfile. Dependencies are pinned to exact versions in package.json instead.
+      # `min-release-age` in .npmrc is an npm >= 12 config key; the npm bundled with
+      # Node 22 is 10.x and would silently ignore it, so the policy would not apply here.
+      # The exact version is the one pinned in package.json's `packageManager` field —
+      # keep the two in step, so CI and a Corepack-enabled checkout run the same npm.
+      - run: npm install -g npm@12.0.1
+
+      # Still `npm install` rather than `npm ci`, although package-lock.json is now
+      # committed. The difference matters: `npm install` will quietly rewrite the
+      # lockfile if package.json has drifted from it, so CI can build against
+      # dependencies no one committed. `npm ci` fails loudly instead — switch when
+      # the lockfile has proven itself here.
       - run: npm install
 
       # BASE_PATH is derived from the repo name rather than hardcoded, so a rename or a
