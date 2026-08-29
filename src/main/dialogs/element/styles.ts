@@ -77,9 +77,14 @@ const dialogStyles = css`
     inset: 0;
     width: fit-content;
     /* Cap the line length so a long single-line message wraps to a few lines instead of
-       stretching the dialog very wide — a calmer width/height ratio. Still shrinks to fit
-       the viewport on small screens. */
-    max-width: min(calc(100dvw - 4em), 34em);
+       stretching the dialog very wide - a calmer width/height ratio. Still shrinks to fit
+       the viewport on small screens.
+       The cap is what a message *just* over it has to live with: sizing here is computed
+       from the unwrapped text and never revisited once it wraps, so such a message pins
+       the box to the full cap and then fills only part of it. A tighter cap keeps that
+       leftover small. It costs height on genuinely long text, which wraps a line or two
+       further, and nothing at all on text that already fits. */
+    max-width: min(calc(100dvw - 4em), 26em);
     height: fit-content;
     max-height: calc(100dvh - 4em);
     margin-inline: auto;
@@ -258,9 +263,13 @@ const dialogStyles = css`
     min-height: 1.75em;
     line-height: 1.25em;
     user-select: text;
-    /* Even out line lengths for the short message blocks; progressively enhanced —
-       browsers without support fall back to normal wrapping. */
-    text-wrap: balance;
+    /* pretty, not balance. The dialog is sized from the *unwrapped* text (see the
+       width/max-width above), so a message just past the width cap takes the box to full
+       width - and balance would then split it into two short, equal lines and leave the
+       rest of that width empty, because balancing never feeds back into sizing. pretty
+       keeps the orphan avoidance and lets the lines fill the box.
+       Progressively enhanced: browsers without support fall back to normal wrapping. */
+    text-wrap: pretty;
   }
 
   /* One shadow-side part per body slot, so an empty intro/outro can be taken out of the
