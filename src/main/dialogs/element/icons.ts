@@ -5,7 +5,7 @@
 import { parseSvg } from "../../internal/dom.js";
 import { infoIconSvg, successIconSvg } from "../../internal/icons.js";
 import type { Renderable } from "../contract/content.js";
-import type { DialogType } from "../contract/types.js";
+import type { DialogType } from "../contract/dialog.js";
 
 export const closeIconSvg = `
   <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 16 16">

@@ -3,7 +3,7 @@
 // adapter contract and the small policy helpers the controller uses to build a view.
 // -------------------------------------------------------------------
 
-import type { ToastType } from "./types.js";
+import type { ToastType } from "./toast.js";
 
 /** Visual style of a toast card. See ToastControllerOptions.appearance. */
 export type ToastAppearance = "light" | "dark" | "solid";

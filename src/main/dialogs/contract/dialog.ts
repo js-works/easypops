@@ -1,5 +1,8 @@
 // -------------------------------------------------------------------
-// # Public types
+// # The dialog vocabulary
+//
+// The controller call surface (DialogsController / DialogsControllerConfig) plus the
+// per-dialog config and result types.
 // -------------------------------------------------------------------
 
 import type { DialogAdapterFactory } from "./adapter.js";

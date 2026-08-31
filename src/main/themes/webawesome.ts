@@ -16,7 +16,7 @@
 // Reached as "easypops/themes/webawesome".
 
 import { createDialogTheme } from "../dialogs/contract/theme.js";
-import { createToastTheme } from "../toasts/theme.js";
+import { createToastTheme } from "../toasts/contract/theme.js";
 
 // Through the factories rather than spreading the defaults by hand: that is the documented
 // way to build a theme, and it keeps working if the merge ever stops being a plain spread.

@@ -1,5 +1,5 @@
 // Public entry point for the dialogs feature. The implementation is split across the
-// sibling modules (types, content, adapter, form-data, texts, buttons, icons, styles,
+// sibling modules (dialog, content, adapter, form-data, texts, buttons, icons, styles,
 // view, element, controller); this file just re-exports the public surface, kept stable
 // for ../index.ts and the package's `exports` map.
 
@@ -42,4 +42,4 @@ export type {
   FormValidator,
   MessageDialogResult,
   NoteRender,
-} from "./contract/types.js";
+} from "./contract/dialog.js";

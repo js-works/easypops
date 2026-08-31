@@ -9,7 +9,7 @@ import { render } from "lit-html";
 import { html, unsafeStatic } from "lit-html/static.js";
 import { repeat } from "lit-html/directives/repeat.js";
 import type { TemplateResult } from "lit-html";
-import type { ToastAdapterFactory } from "../../toasts/view.js";
+import type { ToastAdapterFactory } from "../../toasts/contract/view.js";
 
 /**
  * lit-html adapter. Content is a lit `TemplateResult` or a plain string. The

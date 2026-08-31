@@ -16,8 +16,8 @@
 
 import type { DialogTexts, TextKey } from "../dialogs/contract/texts.js";
 import { defaultDialogTexts } from "../dialogs/contract/texts.js";
-import type { ToastTexts } from "../toasts/texts.js";
-import { defaultToastTexts } from "../toasts/texts.js";
+import type { ToastTexts } from "../toasts/contract/texts.js";
+import { defaultToastTexts } from "../toasts/contract/texts.js";
 
 /**
  * German dialog texts. Typed as the full {@link DialogTexts} rather than a partial, so a

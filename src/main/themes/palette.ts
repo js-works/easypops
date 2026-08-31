@@ -12,8 +12,8 @@
 
 import type { DialogTheme } from "../dialogs/contract/theme.js";
 import { createDialogTheme } from "../dialogs/contract/theme.js";
-import type { ToastTheme } from "../toasts/theme.js";
-import { createToastTheme } from "../toasts/theme.js";
+import type { ToastTheme } from "../toasts/contract/theme.js";
+import { createToastTheme } from "../toasts/contract/theme.js";
 
 /**
  * The colours an application actually thinks in. Each is a CSS colour — a literal, or a

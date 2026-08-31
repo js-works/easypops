@@ -8,7 +8,7 @@
 import { css } from "../internal/css.js";
 import { registerFirstFreeTag } from "../internal/custom-element.js";
 import { toastIcons } from "./icons.js";
-import type { ToastType } from "./types.js";
+import type { ToastType } from "./contract/toast.js";
 
 // Fired by the shadow-DOM close button and by swipe-to-dismiss; caught (composed +
 // bubbling) on the container, which maps event.target (retargeted to the host) to an id.

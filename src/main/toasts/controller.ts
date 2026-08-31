@@ -1,24 +1,24 @@
 // -------------------------------------------------------------------
 // The toasts controller: owns all state, timers, event delegation, the enter/exit
 // and FLIP-shuffle animations, dedupe, overflow, and the loading->promise flow. It hands
-// the bound adapter a fully-resolved list of ToastViews to project (see view.ts).
+// the bound adapter a fully-resolved list of ToastViews to project (see contract/view.ts).
 // -------------------------------------------------------------------
 
 import { toCssVariable } from "../internal/css.js";
 import { DISMISS_EVENT, ensureElementRegistered } from "./element.js";
 import { applyPlacement, splitPlacement } from "./placement.js";
 import { injectContainerStyles } from "./styles.js";
-import { defaultToastTheme } from "./theme.js";
+import { defaultToastTheme } from "./contract/theme.js";
 import { bundledToastText } from "../i18n/texts.js";
-import { policyEnabled, roleFor } from "./view.js";
+import { policyEnabled, roleFor } from "./contract/view.js";
 import type {
   OverflowMode,
   Placement,
   ToastControllerOptions,
   ToastSize,
-} from "./options.js";
-import type { ToastTexts } from "./texts.js";
-import type { ToastAppearance, ToastView } from "./view.js";
+} from "./contract/options.js";
+import type { ToastTexts } from "./contract/texts.js";
+import type { ToastAppearance, ToastView } from "./contract/view.js";
 import type {
   ToastAction,
   LoadingHandle,
@@ -29,7 +29,7 @@ import type {
   ToastType,
   PromiseHandle,
   PromiseMessages,
-} from "./types.js";
+} from "./contract/toast.js";
 
 // Entering and leaving are not mirror images here, because they do not cover the same
 // ground. A toast arrives by rising its own height and fading in — a short, calm move that

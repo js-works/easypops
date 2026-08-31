@@ -8,7 +8,7 @@
 // -------------------------------------------------------------------
 
 import { h } from "../../internal/dom.js";
-import type { ToastAdapterFactory } from "../../toasts/view.js";
+import type { ToastAdapterFactory } from "../../toasts/contract/view.js";
 
 /**
  * Framework-free adapter. Content is a plain string or a DOM `Node`. Does its

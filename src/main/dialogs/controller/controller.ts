@@ -38,7 +38,7 @@ import type {
   DialogMount,
   ResolvedNote,
 } from "../contract/view.js";
-import type { DialogViewConfig } from "../contract/types.js";
+import type { DialogViewConfig } from "../contract/dialog.js";
 import type {
   AnyDialogResult,
   DialogConfig,
@@ -54,7 +54,7 @@ import type {
   DialogHandle,
   FormDialogHandle,
   MessageDialogResult,
-} from "../contract/types.js";
+} from "../contract/dialog.js";
 
 // Combine any number of (optional) signals into one. Returns undefined when none are
 // present, the single signal when exactly one is, else an `AbortSignal.any` of all.

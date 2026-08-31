@@ -5,7 +5,7 @@
 // -------------------------------------------------------------------
 
 import type { DialogSpec } from "./adapter.js";
-import type { ActionButtonType, ButtonRole } from "./types.js";
+import type { ActionButtonType, ButtonRole } from "./dialog.js";
 
 export interface DialogButtonView {
   role: ButtonRole;

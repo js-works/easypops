@@ -2,10 +2,10 @@
 // # Button configs
 // -------------------------------------------------------------------
 
-import type { ActionButtonType, ButtonRole } from "../contract/types.js";
+import type { ActionButtonType, ButtonRole } from "../contract/dialog.js";
 import type { TextKey } from "../contract/texts.js";
 
-export type { ButtonRole } from "../contract/types.js";
+export type { ButtonRole } from "../contract/dialog.js";
 
 export interface ButtonConfig {
   /** Result identity. `cancel` resolves the canceled branch; the others map to actions. */

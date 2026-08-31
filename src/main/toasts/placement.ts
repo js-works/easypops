@@ -2,7 +2,7 @@
 // Stack placement: split a Placement into axes and anchor the container's inline styles.
 // -------------------------------------------------------------------
 
-import type { Placement } from "./options.js";
+import type { Placement } from "./contract/options.js";
 
 export function splitPlacement(placement: Placement): {
   vertical: "top" | "bottom";

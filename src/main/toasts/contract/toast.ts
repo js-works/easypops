@@ -1,8 +1,9 @@
 // -------------------------------------------------------------------
-// Core public types for toasts.
+// The toast vocabulary: the controller call surface plus the per-toast inputs and
+// handles (ToastOptions, ToastInput, ToastHandle, LoadingHandle, PromiseHandle).
 // -------------------------------------------------------------------
 
-import type { Severity } from "../internal/severity.js";
+import type { Severity } from "../../internal/severity.js";
 import type { ToastControllerOptions } from "./options.js";
 
 export type ToastType = Severity | "loading";

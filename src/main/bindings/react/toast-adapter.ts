@@ -9,7 +9,7 @@
 import { createElement } from "react";
 import { flushSync } from "react-dom";
 import type { ReactNode } from "react";
-import type { ToastAdapterFactory, ToastView } from "../../toasts/view.js";
+import type { ToastAdapterFactory, ToastView } from "../../toasts/contract/view.js";
 import type { PortalStore } from "./portals.js";
 
 /**

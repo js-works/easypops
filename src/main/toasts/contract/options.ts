@@ -4,7 +4,7 @@
 
 import type { ToastTheme } from "./theme.js";
 import type { ToastTextResolver } from "./texts.js";
-import type { ToastType } from "./types.js";
+import type { ToastType } from "./toast.js";
 import type {
   ToastAdapterFactory,
   ToastAppearance,

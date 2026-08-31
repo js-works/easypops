@@ -17,7 +17,7 @@
 // React cannot honour) is needed.
 
 import type { DialogButtonView } from "./view.js";
-import type { DialogRenderOverrides, DialogType } from "./types.js";
+import type { DialogRenderOverrides, DialogType } from "./dialog.js";
 import type { Renderable } from "./content.js";
 
 /**
