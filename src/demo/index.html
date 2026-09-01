@@ -7,12 +7,18 @@
     <link rel="stylesheet" href="./demo.css" />
   </head>
   <body>
-    <nav class="demo-nav">
-      <strong>Lit</strong>
-      <a href="./react.html">React form</a>
-      <a href="./react-i18n.html">React i18n</a>
-    </nav>
-    <div id="app"></div>
+    <div class="demo-layout">
+      <!-- Vertical tab rail, shared across all demo pages. "Toasts" and "Dialogs" are
+           in-page hash links handled by demo.ts (both panels live on this page); the two
+           React tabs are ordinary cross-page links. -->
+      <nav class="demo-tabs" aria-label="Demo sections">
+        <a class="demo-tab" data-tab="toasts" href="#toasts">Toasts</a>
+        <a class="demo-tab" data-tab="dialogs" href="#dialogs">Dialogs (Lit)</a>
+        <a class="demo-tab" href="./react.html">React form (Mantine)</a>
+        <a class="demo-tab" href="./react-i18n.html">React i18n</a>
+      </nav>
+      <div id="app"></div>
+    </div>
     <script type="module" src="./demo.ts"></script>
   </body>
 </html>

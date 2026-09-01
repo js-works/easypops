@@ -762,7 +762,10 @@ async function runDrawerCritical(): Promise<void> {
 
 const page = html`
   <main class="page">
-    <div>
+    <div class="demo-content">
+      <!-- Tab panels. demo.ts shows exactly one, chosen from the URL hash
+           (#toasts / #dialogs) and toggled by the "Toasts" / "Dialogs" tabs in the rail. -->
+      <div class="demo-panel" data-tab="toasts" role="tabpanel" aria-label="Toasts">
       <section>
         <h2>Toasts</h2>
         <div class="row">
@@ -780,7 +783,9 @@ const page = html`
         <div class="row">${stackedPicker()}</div>
         <div class="row">${placementPicker()}</div>
       </section>
+      </div>
 
+      <div class="demo-panel" data-tab="dialogs" role="tabpanel" aria-label="Dialogs" hidden>
       <section>
         <h2>Message dialogs</h2>
         <div class="row">
@@ -836,6 +841,7 @@ const page = html`
           </button>
         </div>
       </section>
+      </div>
     </div>
     <section class="results">
       <h2>Result log</h2>
@@ -846,3 +852,30 @@ const page = html`
 
 render(page, document.getElementById("app")!);
 logEl = document.getElementById("log") as HTMLPreElement;
+
+// -------------------------------------------------------------------
+// Vertical tabs — "Toasts" / "Dialogs" both live on this page, one panel visible at a
+// time. The choice is kept in the URL hash so the rail's links (and the ones on the React
+// pages, which point at ./index.html#toasts etc.) just work as plain anchors.
+// -------------------------------------------------------------------
+
+type LitTab = "toasts" | "dialogs";
+
+function currentTab(): LitTab {
+  return location.hash === "#dialogs" ? "dialogs" : "toasts";
+}
+
+function applyTab(tab: LitTab): void {
+  for (const panel of document.querySelectorAll<HTMLElement>(".demo-panel")) {
+    panel.hidden = panel.dataset.tab !== tab;
+  }
+  for (const link of document.querySelectorAll<HTMLAnchorElement>(".demo-tab[data-tab]")) {
+    const active = link.dataset.tab === tab;
+    link.classList.toggle("is-active", active);
+    if (active) link.setAttribute("aria-current", "page");
+    else link.removeAttribute("aria-current");
+  }
+}
+
+window.addEventListener("hashchange", () => applyTab(currentTab()));
+applyTab(currentTab());

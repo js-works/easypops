@@ -71,7 +71,7 @@
 
   background: var(--badge-bg);
   color: #fff;
-  font-size: 0.78rem;
+  font-size: 0.86rem;
   line-height: 1.35;
 
   /* It overlaps the field below, so it has to read as a layer of its own. */

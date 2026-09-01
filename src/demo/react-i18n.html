@@ -7,12 +7,15 @@
     <link rel="stylesheet" href="./demo.css" />
   </head>
   <body>
-    <nav class="demo-nav">
-      <a href="./index.html">Lit demo</a>
-      <a href="./react.html">React form</a>
-      <strong>React i18n</strong>
-    </nav>
-    <div id="app"></div>
+    <div class="demo-layout">
+      <nav class="demo-tabs" aria-label="Demo sections">
+        <a class="demo-tab" href="./index.html#toasts">Toasts</a>
+        <a class="demo-tab" href="./index.html#dialogs">Dialogs (Lit)</a>
+        <a class="demo-tab" href="./react.html">React form (Mantine)</a>
+        <a class="demo-tab" aria-current="page" href="./react-i18n.html">React i18n</a>
+      </nav>
+      <div id="app"></div>
+    </div>
     <script type="module" src="./react-i18n.tsx"></script>
   </body>
 </html>
